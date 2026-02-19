@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Plus Admin - Add User</title>
+    <!-- plugins:css -->
+    <link rel="stylesheet" href="/admin/assets/vendors/mdi/css/materialdesignicons.min.css">
+    <link rel="stylesheet" href="/admin/assets/vendors/ti-icons/css/themify-icons.css">
+    <link rel="stylesheet" href="/admin/assets/vendors/css/vendor.bundle.base.css">
+    <link rel="stylesheet" href="/admin/assets/vendors/font-awesome/css/font-awesome.min.css">
+    <!-- endinject -->
+    <!-- Plugin css for this page -->
+    <!-- End plugin css for this page -->
+    <!-- inject:css -->
+    <!-- endinject -->
+    <!-- Layout styles -->
+    <link rel="stylesheet" href="/admin/assets/css/style.css">
+    <!-- End layout styles -->
+    <link rel="shortcut icon" href="/favicon.png" />
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .image-upload-wrapper {
+            width: 150px;
+            height: 150px;
+            margin: 0 auto 20px;
+            position: relative;
+        }
+
+        .image-preview-container {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 3px solid #007bff;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .image-preview-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none;
+        }
+
+        .image-preview-container .upload-placeholder {
+            text-align: center;
+            color: #6c757d;
+        }
+
+        .image-preview-container .upload-placeholder i {
+            font-size: 40px;
+            display: block;
+        }
+
+        .drag-drop-zone {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 5;
+            transition: background 0.3s;
+        }
+
+        .drag-drop-zone.dragover {
+            background: rgba(0, 123, 255, 0.2);
+            border: 2px dashed #007bff;
+        }
+
+        #profile_image_input {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container-scroller">
+        <!-- partial:partials/_sidebar.html -->
+        <nav class="sidebar sidebar-offcanvas" id="sidebar">
+            <ul class="nav">
+                <li class="nav-item nav-profile border-bottom">
+                    <a href="#" class="nav-link flex-column">
+                        <div class="nav-profile-image">
+                            <img src="/admin/assets/images/faces/face1.jpg" alt="profile">
+                        </div>
+                        <div class="nav-profile-text d-flex ms-0 mb-3 flex-column">
+                            <span class="fw-semibold mb-1 mt-2 text-center">Antonio Olson</span>
+                            <span class="text-secondary icon-sm text-center">$3499.00</span>
+                        </div>
+                    </a>
+                </li>
+                <li class="nav-item pt-3">
+                    <a class="nav-link d-block" href="/admin/index.html">
+                        <img class="sidebar-brand-logo" src="/images/ariana_icon.png" alt="">
+                        <img class="sidebar-brand-logomini" src="/admin/assets/images/logo-mini.svg" alt="">
+                        <div class="small fw-light pt-1">Responsive Dashboard </div>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin/index.html">
+                        <i class="mdi mdi-certificate menu-icon"></i>
+                        <span class="menu-title">Manage Certificates</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin/users.html">
+                        <i class="mdi mdi-account-group menu-icon"></i>
+                        <span class="menu-title">Manage Users</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        <!-- partial -->
+        <div class="container-fluid page-body-wrapper">
+            <!-- partial:partials/_navbar.html -->
+            <nav class="navbar default-layout-navbar col-lg-12 col-12 p-0 fixed-top d-flex flex-row">
+                <div class="navbar-menu-wrapper d-flex align-items-stretch">
+                    <button class="navbar-toggler navbar-toggler align-self-center" type="button"
+                        data-toggle="minimize">
+                        <span class="mdi mdi-chevron-double-left"></span>
+                    </button>
+                    <div class="text-center navbar-brand-wrapper d-flex align-items-center justify-content-center">
+                        <a class="navbar-brand brand-logo-mini" href="/admin/index.html"><img
+                                src="/admin/assets/images/logo-mini.svg" alt="logo" /></a>
+                    </div>
+                    <ul class="navbar-nav navbar-nav-right">
+                        <li class="nav-item nav-profile dropdown d-none d-md-block">
+                            <a class="nav-link" id="profileDropdown" href="#" data-bs-toggle="dropdown"
+                                aria-expanded="false">
+                                <div class="nav-profile-text">English </div>
+                            </a>
+                        </li>
+                        <li class="nav-item nav-logout d-none d-lg-block">
+                            <a class="nav-link" href="/admin/index.html">
+                                <i class="mdi mdi-home-circle"></i>
+                            </a>
+                        </li>
+                    </ul>
+                    <button class="navbar-toggler navbar-toggler-right d-lg-none align-self-center" type="button"
+                        data-toggle="offcanvas">
+                        <span class="mdi mdi-menu"></span>
+                    </button>
+                </div>
+            </nav>
+            <!-- partial -->
+            <div class="main-panel">
+                <div class="content-wrapper">
+                    <div class="page-header">
+                        <h3 class="page-title"> Add User </h3>
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="/admin/users.html">Manage Users</a></li>
+                                <li class="breadcrumb-item active" aria-current="page">Add User</li>
+                            </ol>
+                        </nav>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-8 grid-margin stretch-card mx-auto">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h4 class="card-title">User Details</h4>
+                                    <p class="card-description"> Enter the details to register a new user </p>
+                                    <form class="forms-sample" id="addUserForm" enctype="multipart/form-data">
+                                        <div class="image-upload-wrapper">
+                                            <div class="image-preview-container" id="imagePreviewContainer">
+                                                <div class="upload-placeholder" id="uploadPlaceholder">
+                                                    <i class="mdi mdi-camera"></i>
+                                                    <span>Upload Photo</span>
+                                                </div>
+                                                <img id="imagePreview" src="" alt="Preview">
+                                                <div class="drag-drop-zone" id="dragDropZone"></div>
+                                            </div>
+                                            <input type="file" id="profile_image_input" name="profile_image"
+                                                accept="image/*" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="firstname">First Name</label>
+                                            <input type="text" class="form-control" id="firstname" name="firstname"
+                                                placeholder="Enter First Name" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="lastname">Last Name</label>
+                                            <input type="text" class="form-control" id="lastname" name="lastname"
+                                                placeholder="Enter Last Name" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="email">Email</label>
+                                            <input type="email" class="form-control" id="email" name="email"
+                                                placeholder="Enter Email">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="phone">Phone</label>
+                                            <input type="text" class="form-control" id="phone" name="phone"
+                                                placeholder="Enter Phone Number">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="address">Address</label>
+                                            <textarea class="form-control" id="address" name="address" rows="3"
+                                                placeholder="Enter Address"></textarea>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="course">Course</label>
+                                            <input type="text" class="form-control" id="course" name="course"
+                                                placeholder="Enter Course Name">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="duration_of_course">Duration of Course</label>
+                                            <input type="text" class="form-control" id="duration_of_course"
+                                                name="duration_of_course" placeholder="e.g. 6 Months">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="resumption_date">Resumption Date</label>
+                                            <input type="date" class="form-control" id="resumption_date"
+                                                name="resumption_date">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="cert_code">Certificate Code</label>
+                                            <input type="text" class="form-control" id="cert_code" name="cert_code"
+                                                placeholder="Enter Certificate Code (Optional)">
+                                        </div>
+                                        <button type="submit" class="btn btn-primary me-2">Submit</button>
+                                        <a href="/admin/users.html" class="btn btn-light">Cancel</a>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- content-wrapper ends -->
+                <footer class="footer">
+                    <div class="d-sm-flex justify-content-center justify-content-sm-between">
+                        <span class="text-muted text-center text-sm-left d-block d-sm-inline-block">Copyright © 2023 <a
+                                href="https://www.bootstrapdash.com/" target="_blank">BootstrapDash</a>. All rights
+                            reserved.</span>
+                    </div>
+                </footer>
+            </div>
+            <!-- main-panel ends -->
+        </div>
+        <!-- page-body-wrapper ends -->
+    </div>
+    <!-- container-scroller -->
+    <!-- plugins:js -->
+    <script src="/admin/assets/vendors/js/vendor.bundle.base.js"></script>
+    <!-- endinject -->
+    <!-- inject:js -->
+    <script src="/admin/assets/js/off-canvas.js"></script>
+    <script src="/admin/assets/js/misc.js"></script>
+    <script src="/admin/assets/js/settings.js"></script>
+    <script src="/admin/assets/js/todolist.js"></script>
+    <script src="/admin/assets/js/hoverable-collapse.js"></script>
+    <!-- endinject -->
+    <script>
+        const dragDropZone = document.getElementById('dragDropZone');
+        const fileInput = document.getElementById('profile_image_input');
+        const imagePreview = document.getElementById('imagePreview');
+        const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+
+        // Handle drag and drop events
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dragDropZone.addEventListener(eventName, e => {
+                e.preventDefault();
+                e.stopPropagation();
+            }, false);
+        });
+
+        dragDropZone.addEventListener('dragover', () => dragDropZone.classList.add('dragover'));
+        ['dragleave', 'drop'].forEach(eventName => {
+            dragDropZone.addEventListener(eventName, () => dragDropZone.classList.remove('dragover'));
+        });
+
+        dragDropZone.addEventListener('drop', e => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        });
+
+        dragDropZone.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', function () {
+            handleFiles(this.files);
+        });
+
+        function handleFiles(files) {
+            if (files.length > 0) {
+                const file = files[0];
+                if (!file.type.startsWith('image/')) {
+                    Swal.fire('Error', 'Please upload an image file.', 'error');
+                    return;
+                }
+                if (file.size > 2 * 1024 * 1024) {
+                    Swal.fire('Error', 'Image size must be less than 2MB.', 'error');
+                    return;
+                }
+
+                // Set the file to the input
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                fileInput.files = dataTransfer.files;
+
+                const reader = new FileReader();
+                reader.onload = e => {
+                    imagePreview.src = e.target.result;
+                    imagePreview.style.display = 'block';
+                    uploadPlaceholder.style.display = 'none';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        document.getElementById('addUserForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn.innerHTML;
+
+            // Loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="mdi mdi-loading mdi-spin"></i> Processing...';
+
+            const formData = new FormData(this);
+
+            // Re-fetch form data ensures multiple files aren't an issue if they existed
+            // But here we rely on the fileInput.files being set in handleFiles
+
+            fetch('/backend/backend.php?action=add_user&ajax=1', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success!',
+                            text: data.message,
+                            confirmButtonColor: '#007bff'
+                        }).then(() => {
+                            window.location.href = '/admin/users.html';
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Oops...',
+                            text: data.message,
+                            confirmButtonColor: '#dc3545'
+                        });
+                        // Restore button
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalBtnText;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'An error occurred. Please try again.',
+                        confirmButtonColor: '#dc3545'
+                    });
+                    // Restore button
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnText;
+                });
+        });
+    </script>
+</body>
+
+</html>

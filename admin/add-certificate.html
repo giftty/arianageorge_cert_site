@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Plus Admin - Add Certificate</title>
+    <!-- plugins:css -->
+    <link rel="stylesheet" href="/admin/assets/vendors/mdi/css/materialdesignicons.min.css">
+    <link rel="stylesheet" href="/admin/assets/vendors/ti-icons/css/themify-icons.css">
+    <link rel="stylesheet" href="/admin/assets/vendors/css/vendor.bundle.base.css">
+    <link rel="stylesheet" href="/admin/assets/vendors/font-awesome/css/font-awesome.min.css">
+    <!-- endinject -->
+    <!-- Plugin css for this page -->
+    <!-- End plugin css for this page -->
+    <!-- inject:css -->
+    <!-- endinject -->
+    <!-- Layout styles -->
+    <link rel="stylesheet" href="/admin/assets/css/style.css">
+    <!-- End layout styles -->
+    <link rel="shortcut icon" href="/favicon.png" />
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+
+<body>
+    <div class="container-scroller">
+        <!-- partial:partials/_sidebar.html -->
+        <nav class="sidebar sidebar-offcanvas" id="sidebar">
+            <ul class="nav">
+                <li class="nav-item nav-profile border-bottom">
+                    <a href="#" class="nav-link flex-column">
+                        <div class="nav-profile-image">
+                            <img src="/admin/assets/images/faces/face1.jpg" alt="profile">
+                        </div>
+                        <div class="nav-profile-text d-flex ms-0 mb-3 flex-column">
+                            <span class="fw-semibold mb-1 mt-2 text-center">Antonio Olson</span>
+                            <span class="text-secondary icon-sm text-center">$3499.00</span>
+                        </div>
+                    </a>
+                </li>
+                <li class="nav-item pt-3">
+                    <a class="nav-link d-block" href="/admin/index.html">
+                        <img class="sidebar-brand-logo" src="/images/ariana_icon.png" alt="">
+                        <img class="sidebar-brand-logomini" src="/admin/assets/images/logo-mini.svg" alt="">
+                        <div class="small fw-light pt-1">Responsive Dashboard </div>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin/index.html">
+                        <i class="mdi mdi-certificate menu-icon"></i>
+                        <span class="menu-title">Manage Certificates</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin/users.html">
+                        <i class="mdi mdi-account-group menu-icon"></i>
+                        <span class="menu-title">Manage Users</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        <!-- partial -->
+        <div class="container-fluid page-body-wrapper">
+            <!-- partial:partials/_navbar.html -->
+            <nav class="navbar default-layout-navbar col-lg-12 col-12 p-0 fixed-top d-flex flex-row">
+                <div class="navbar-menu-wrapper d-flex align-items-stretch">
+                    <button class="navbar-toggler navbar-toggler align-self-center" type="button"
+                        data-toggle="minimize">
+                        <span class="mdi mdi-chevron-double-left"></span>
+                    </button>
+                    <div class="text-center navbar-brand-wrapper d-flex align-items-center justify-content-center">
+                        <a class="navbar-brand brand-logo-mini" href="/admin/index.html"><img
+                                src="/admin/assets/images/logo-mini.svg" alt="logo" /></a>
+                    </div>
+                    <ul class="navbar-nav navbar-nav-right">
+                        <li class="nav-item nav-profile dropdown d-none d-md-block">
+                            <a class="nav-link" id="profileDropdown" href="#" data-bs-toggle="dropdown"
+                                aria-expanded="false">
+                                <div class="nav-profile-text">English </div>
+                            </a>
+                        </li>
+                        <li class="nav-item nav-logout d-none d-lg-block">
+                            <a class="nav-link" href="/admin/index.html">
+                                <i class="mdi mdi-home-circle"></i>
+                            </a>
+                        </li>
+                    </ul>
+                    <button class="navbar-toggler navbar-toggler-right d-lg-none align-self-center" type="button"
+                        data-toggle="offcanvas">
+                        <span class="mdi mdi-menu"></span>
+                    </button>
+                </div>
+            </nav>
+            <!-- partial -->
+            <div class="main-panel">
+                <div class="content-wrapper">
+                    <div class="page-header">
+                        <h3 class="page-title"> Add Certificate </h3>
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="/admin/index.html">Dashboard</a></li>
+                                <li class="breadcrumb-item active" aria-current="page">Add Certificate</li>
+                            </ol>
+                        </nav>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-8 grid-margin stretch-card mx-auto">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h4 class="card-title">Certificate Details</h4>
+                                    <p class="card-description"> Enter the details to register a new certificate </p>
+                                    <form class="forms-sample" id="addCertificateForm"
+                                        action="/backend/backend.php?action=add_certificate" method="POST">
+                                        <div class="form-group">
+                                            <label for="owner">Owner Name</label>
+                                            <input type="text" class="form-control" id="owner" name="owner"
+                                                placeholder="Enter Owner Name" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="cert_type">Certificate Type</label>
+                                            <select class="form-control" id="cert_type" name="cert_type">
+                                                <option value="">Select Type</option>
+                                                <option value="Riggers Work at Height Safety">Riggers Work at Height
+                                                    Safety</option>
+                                                <option value="Basic CPR AED and First Aid">Basic CPR AED and First Aid
+                                                </option>
+                                                <option value="Electrical Safety">Electrical Safety</option>
+                                                <option value="Fire Prevention and Fighting">Fire Prevention and
+                                                    Fighting</option>
+                                                <option value="Risk Assessment">Risk Assessment</option>
+                                                <option value="Confined Space Safety">Confined Space Safety</option>
+                                                <option value="Mechanical Works Safety">Mechanical Works Safety</option>
+                                                <option value="Hot Work Safety">Hot Work Safety</option>
+                                                <option value="Civil Works Safety">Civil Works Safety</option>
+                                                <option value="Rigging and Lifting">Rigging and Lifting</option>
+                                                <option value="Fall Arrest and Basic Rescue">Fall Arrest and Basic
+                                                    Rescue</option>
+                                                <option value="Driving Safely/Defensive Driving">Driving
+                                                    Safely/Defensive Driving</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="date_issued">Date Issued</label>
+                                            <input type="date" class="form-control" id="date_issued" name="date_issued">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="expiration_date">Expiration Date (Optional)</label>
+                                            <input type="date" class="form-control" id="expiration_date"
+                                                name="expiration_date">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="event">Event Name</label>
+                                            <input type="text" class="form-control" id="event" name="event"
+                                                placeholder="Enter Event Name">
+                                        </div>
+                                        <button type="submit" class="btn btn-primary me-2">Submit</button>
+                                        <a href="/admin/index.html" class="btn btn-light">Cancel</a>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- content-wrapper ends -->
+                <footer class="footer">
+                    <div class="d-sm-flex justify-content-center justify-content-sm-between">
+                        <span class="text-muted text-center text-sm-left d-block d-sm-inline-block">Copyright © 2023 <a
+                                href="https://www.bootstrapdash.com/" target="_blank">BootstrapDash</a>. All rights
+                            reserved.</span>
+                    </div>
+                </footer>
+            </div>
+            <!-- main-panel ends -->
+        </div>
+        <!-- page-body-wrapper ends -->
+    </div>
+    <!-- container-scroller -->
+    <!-- plugins:js -->
+    <script src="/admin/assets/vendors/js/vendor.bundle.base.js"></script>
+    <!-- endinject -->
+    <!-- inject:js -->
+    <script src="/admin/assets/js/off-canvas.js"></script>
+    <script src="/admin/assets/js/misc.js"></script>
+    <script src="/admin/assets/js/settings.js"></script>
+    <script src="/admin/assets/js/todolist.js"></script>
+    <script src="/admin/assets/js/hoverable-collapse.js"></script>
+    <!-- endinject -->
+    <script>
+        document.getElementById('addCertificateForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn.innerHTML;
+
+            // Loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="mdi mdi-loading mdi-spin"></i> Processing...';
+
+            const formData = new FormData(this);
+            fetch('/backend/backend.php?action=add_certificate&ajax=1', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success!',
+                            text: data.message,
+                            confirmButtonColor: '#007bff'
+                        }).then(() => {
+                            window.location.href = '/admin/index.html';
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Oops...',
+                            text: data.message,
+                            confirmButtonColor: '#dc3545'
+                        });
+                        // Restore button
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalBtnText;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'An error occurred. Please try again.',
+                        confirmButtonColor: '#dc3545'
+                    });
+                    // Restore button
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnText;
+                });
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Plus Admin - Manage Users</title>
+    <!-- plugins:css -->
+    <link rel="stylesheet" href="/admin/assets/vendors/mdi/css/materialdesignicons.min.css">
+    <link rel="stylesheet" href="/admin/assets/vendors/ti-icons/css/themify-icons.css">
+    <link rel="stylesheet" href="/admin/assets/vendors/css/vendor.bundle.base.css">
+    <link rel="stylesheet" href="/admin/assets/vendors/font-awesome/css/font-awesome.min.css">
+    <!-- endinject -->
+    <!-- Plugin css for this page -->
+    <link rel="stylesheet" href="/admin/assets/vendors/jquery-bar-rating/css-stars.css">
+    <link rel="stylesheet" href="/admin/assets/vendors/font-awesome/css/font-awesome.min.css">
+    <!-- End plugin css for this page -->
+    <!-- inject:css -->
+    <!-- endinject -->
+    <!-- Layout styles -->
+    <link rel="stylesheet" href="/admin/assets/css/style.css">
+    <!-- End layout styles -->
+    <link rel="shortcut icon" href="/favicon.png" />
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+
+<body>
+    <div class="container-scroller">
+        <!-- partial:partials/_sidebar.html -->
+        <nav class="sidebar sidebar-offcanvas" id="sidebar">
+            <ul class="nav">
+                <li class="nav-item nav-profile border-bottom">
+                    <a href="#" class="nav-link flex-column">
+                        <div class="nav-profile-image">
+                            <img id="sidebarAdminAvatar" src="/admin/assets/images/faces/face1.jpg" alt="profile">
+                        </div>
+                        <div class="nav-profile-text d-flex ms-0 mb-3 flex-column">
+                            <span class="fw-semibold mb-1 mt-2 text-center" id="sidebarAdminName">Loading...</span>
+                            <span class="text-secondary icon-sm text-center">Administrator</span>
+                        </div>
+                    </a>
+                </li>
+                <li class="nav-item pt-3">
+                    <a class="nav-link d-block" href="/admin/index.html">
+                        <img class="sidebar-brand-logo" src="/images/ariana_icon.png" alt="">
+                        <img class="sidebar-brand-logomini" src="/admin/assets/images/logo-mini.svg" alt="">
+                        <div class="small fw-light pt-1">Responsive Dashboard </div>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin/index.html">
+                        <i class="mdi mdi-certificate menu-icon"></i>
+                        <span class="menu-title">Manage Certificates</span>
+                    </a>
+                </li>
+                <li class="nav-item active">
+                    <a class="nav-link" href="/admin/users.html">
+                        <i class="mdi mdi-account-group menu-icon"></i>
+                        <span class="menu-title">Manage Users</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        <!-- partial -->
+        <div class="container-fluid page-body-wrapper">
+            <!-- partial:partials/_navbar.html -->
+            <nav class="navbar default-layout-navbar col-lg-12 col-12 p-0 fixed-top d-flex flex-row">
+                <div class="navbar-menu-wrapper d-flex align-items-stretch">
+                    <button class="navbar-toggler navbar-toggler align-self-center" type="button"
+                        data-toggle="minimize">
+                        <span class="mdi mdi-chevron-double-left"></span>
+                    </button>
+                    <div class="text-center navbar-brand-wrapper d-flex align-items-center justify-content-center">
+                        <a class="navbar-brand brand-logo-mini" href="/admin/index.html"><img
+                                src="/admin/assets/images/logo-mini.svg" alt="logo" /></a>
+                    </div>
+                    <ul class="navbar-nav navbar-nav-right">
+                        <li class="nav-item nav-profile dropdown d-none d-md-block me-3">
+                            <a class="nav-link dropdown-toggle" id="adminProfileDropdown" href="#"
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                                <img id="navbarAdminAvatar" src="/admin/assets/images/faces/face1.jpg" alt="profile"
+                                    style="width:32px;height:32px;border-radius:50%;object-fit:cover;margin-right:8px;">
+                                <span id="navbarAdminName" class="fw-semibold">Admin</span>
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-right navbar-dropdown"
+                                aria-labelledby="adminProfileDropdown">
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item text-danger" href="#" id="logoutBtn">
+                                    <i class="mdi mdi-logout me-2"></i> Logout
+                                </a>
+                            </div>
+                        </li>
+                        <li class="nav-item nav-logout d-none d-lg-block">
+                            <a class="nav-link" href="/">
+                                <i class="mdi mdi-home-circle"></i>
+                            </a>
+                        </li>
+                    </ul>
+                    <button class="navbar-toggler navbar-toggler-right d-lg-none align-self-center" type="button"
+                        data-toggle="offcanvas">
+                        <span class="mdi mdi-menu"></span>
+                    </button>
+                </div>
+            </nav>
+            <!-- partial -->
+            <div class="main-panel">
+                <div class="content-wrapper pb-0">
+                    <div class="page-header flex-wrap">
+                        <div class="header-left">
+                            <h3 class="page-title"> Manage Users </h3>
+                        </div>
+                        <div class="header-right d-flex flex-wrap mt-2 mt-sm-0">
+                            <a href="/admin/add-user.html" class="btn btn-primary mt-2 mt-sm-0 btn-icon-text">
+                                <i class="mdi mdi-plus-circle"></i> Add User </a>
+                        </div>
+                    </div>
+                    <!-- Users Table -->
+                    <div class="row">
+                        <div class="col-12 grid-margin stretch-card">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h4 class="card-title">Users List</h4>
+                                    <div class="table-responsive">
+                                        <table class="table table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>Photo</th>
+                                                    <th>Firstname</th>
+                                                    <th>Lastname</th>
+                                                    <th>Email</th>
+                                                    <th>Phone</th>
+                                                    <th>Course</th>
+                                                    <th>Cert Code</th>
+                                                    <th>Resumption</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="usersTableBody">
+                                                <tr>
+                                                    <td colspan="10" class="text-center">Loading users...</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mt-3">
+                                        <div id="paginationInfo">Showing 0 to 0 of 0 entries</div>
+                                        <nav>
+                                            <ul class="pagination mb-0" id="paginationControls">
+                                                <!-- Pagination buttons will be injected here -->
+                                            </ul>
+                                        </nav>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- content-wrapper ends -->
+                <!-- partial:partials/_footer.html -->
+                <footer class="footer">
+                    <div class="d-sm-flex justify-content-center justify-content-sm-between">
+                        <span class="text-muted text-center text-sm-left d-block d-sm-inline-block">Copyright © 2023 <a
+                                href="https://www.bootstrapdash.com/" target="_blank">BootstrapDash</a>. All rights
+                            reserved.</span>
+                        <span class="float-none float-sm-right d-block mt-1 mt-sm-0 text-center">Hand-crafted & made
+                            with <i class="mdi mdi-heart text-danger"></i></span>
+                    </div>
+                </footer>
+                <!-- partial -->
+            </div>
+            <!-- main-panel ends -->
+        </div>
+        <!-- page-body-wrapper ends -->
+    </div>
+    <!-- container-scroller -->
+    <!-- plugins:js -->
+    <script src="/admin/assets/vendors/js/vendor.bundle.base.js"></script>
+    <!-- endinject -->
+    <!-- Plugin js for this page -->
+    <!-- End plugin js for this page -->
+    <!-- inject:js -->
+    <script src="/admin/assets/js/off-canvas.js"></script>
+    <script src="/admin/assets/js/hoverable-collapse.js"></script>
+    <script src="/admin/assets/js/misc.js"></script>
+    <script src="/admin/assets/js/settings.js"></script>
+    <script src="/admin/assets/js/todolist.js"></script>
+    <!-- endinject -->
+    <script>
+        let allUsers = [];
+        let currentPage = 1;
+        const rowsPerPage = 10;
+
+        document.addEventListener('DOMContentLoaded', function () {
+            fetchAdminProfile();
+            fetchUsersData();
+
+            document.getElementById('logoutBtn').addEventListener('click', function (e) {
+                e.preventDefault();
+                Swal.fire({
+                    title: 'Logout?',
+                    text: 'Are you sure you want to log out?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc3545',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Yes, logout'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        fetch('/backend/backend.php?action=logout')
+                            .then(res => res.json())
+                            .then(data => { window.location.href = data.redirect || '/admin/login.html'; })
+                            .catch(() => { window.location.href = '/admin/login.html'; });
+                    }
+                });
+            });
+        });
+
+        function fetchAdminProfile() {
+            fetch('/backend/backend.php?action=check_auth')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'authorized') {
+                        const name = data.username || 'Admin';
+                        document.getElementById('sidebarAdminName').innerText = name;
+                        document.getElementById('navbarAdminName').innerText = name;
+                    } else {
+                        window.location.href = '/admin/login.html';
+                    }
+                })
+                .catch(() => { window.location.href = '/admin/login.html'; });
+        }
+
+        function fetchUsersData() {
+            fetch('/backend/backend.php?action=get_users_data')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        allUsers = data.users;
+                        currentPage = 1;
+                        displayUsers();
+                    } else {
+                        if (data.message === 'Unauthorized') {
+                            window.location.href = '/admin/login.html';
+                        } else {
+                            console.error('Error fetching users data:', data.message);
+                        }
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        function displayUsers() {
+            const tableBody = document.getElementById('usersTableBody');
+            tableBody.innerHTML = '';
+
+            if (allUsers.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="10" class="text-center">No users found.</td></tr>';
+                updatePagination(0);
+                return;
+            }
+
+            const start = (currentPage - 1) * rowsPerPage;
+            const end = Math.min(start + rowsPerPage, allUsers.length);
+            const paginatedItems = allUsers.slice(start, end);
+
+            paginatedItems.forEach(user => {
+                const profileImg = user.profile_image ? user.profile_image : '/admin/assets/images/faces/face1.jpg';
+                const row = `
+                  <tr>
+                    <td class="py-1">
+                      <img src="${profileImg}" alt="image" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover;">
+                    </td>
+                    <td>${user.firstname}</td>
+                    <td>${user.lastname}</td>
+                    <td>${user.email || 'N/A'}</td>
+                    <td>${user.phone || 'N/A'}</td>
+                    <td>${user.course || 'N/A'}</td>
+                    <td><span class="badge badge-info">${user.cert_code || 'None'}</span></td>
+                    <td>${user.resumption_date || 'N/A'}</td>
+                    <td>
+                      <button class="btn btn-sm btn-primary" onclick="editUser(${user.id})" title="Edit"><i class="mdi mdi-pencil"></i></button>
+                      <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id})" title="Delete"><i class="mdi mdi-delete"></i></button>
+                    </td>
+                  </tr>
+                `;
+                tableBody.innerHTML += row;
+            });
+
+            document.getElementById('paginationInfo').innerText = `Showing ${start + 1} to ${end} of ${allUsers.length} entries`;
+            updatePagination(allUsers.length);
+        }
+
+        function updatePagination(totalItems) {
+            const totalPages = Math.ceil(totalItems / rowsPerPage);
+            const paginationControls = document.getElementById('paginationControls');
+            paginationControls.innerHTML = '';
+
+            if (totalPages <= 1) return;
+
+            // Previous button
+            paginationControls.innerHTML += `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${currentPage - 1})">Previous</a>
+                </li>
+            `;
+
+            for (let i = 1; i <= totalPages; i++) {
+                paginationControls.innerHTML += `
+                    <li class="page-item ${currentPage === i ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
+                    </li>
+                `;
+            }
+
+            // Next button
+            paginationControls.innerHTML += `
+                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${currentPage + 1})">Next</a>
+                </li>
+            `;
+        }
+
+        function changePage(page) {
+            const totalPages = Math.ceil(allUsers.length / rowsPerPage);
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            displayUsers();
+        }
+
+        function editUser(id) {
+            Swal.fire({
+                title: 'Info',
+                text: 'Edit user ID: ' + id + ' (Implementation pending)',
+                icon: 'info',
+                confirmButtonColor: '#007bff'
+            });
+        }
+
+        function deleteUser(id) {
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "You won't be able to revert this!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, delete it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch('/backend/backend.php?action=delete_user&id=' + id)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.status === 'success') {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Deleted!',
+                                    text: data.message,
+                                    confirmButtonColor: '#007bff'
+                                });
+                                fetchUsersData();
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: data.message,
+                                    confirmButtonColor: '#dc3545'
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: 'An error occurred. Please try again.',
+                                confirmButtonColor: '#dc3545'
+                            });
+                        });
+                }
+            })
+        }
+    </script>
+</body>
+
+</html>
