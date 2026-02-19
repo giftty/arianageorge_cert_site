@@ -342,12 +342,9 @@
         }
 
         function editUser(id) {
-            Swal.fire({
-                title: 'Info',
-                text: 'Edit user ID: ' + id + ' (Implementation pending)',
-                icon: 'info',
-                confirmButtonColor: '#007bff'
-            });
+            // Navigate to add-user page in edit mode
+              // Open the add-user form in edit mode
+              window.location.href = '/admin/add-user.html?id=' + encodeURIComponent(id);
         }
 
         function deleteUser(id) {

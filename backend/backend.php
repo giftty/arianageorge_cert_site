@@ -322,6 +322,140 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             die($error);
         }
     }
+
+    if ($action === 'edit_user') {
+        $id = $_GET['id'] ?? '';
+        if (!$id) {
+            if (isset($_GET['ajax'])) {
+                header('Content-Type: application/json');
+                echo json_encode(['status' => 'error', 'message' => 'Missing user id.']);
+                exit;
+            }
+            die('Missing user id.');
+        }
+
+        // Fetch existing user
+        $existingStmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+        $existingStmt->execute([$id]);
+        $existing = $existingStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$existing) {
+            if (isset($_GET['ajax'])) {
+                header('Content-Type: application/json');
+                echo json_encode(['status' => 'error', 'message' => 'User not found.']);
+                exit;
+            }
+            die('User not found.');
+        }
+
+        $firstname = $_POST['firstname'] ?? $existing['firstname'];
+        $lastname = $_POST['lastname'] ?? $existing['lastname'];
+        $email = $_POST['email'] ?? $existing['email'];
+        $phone = $_POST['phone'] ?? $existing['phone'];
+        $address = $_POST['address'] ?? $existing['address'];
+        $course = $_POST['course'] ?? $existing['course'];
+        $duration_of_course = $_POST['duration_of_course'] ?? $existing['duration_of_course'];
+        $resumption_date = $_POST['resumption_date'] ?? $existing['resumption_date'];
+        $cert_code = $_POST['cert_code'] ?? $existing['cert_code'];
+
+        $errors = [];
+        if (!$firstname)
+            $errors['firstname'] = 'Firstname is required.';
+        if (!$lastname)
+            $errors['lastname'] = 'Lastname is required.';
+        if ($email && !filter_var($email, FILTER_VALIDATE_EMAIL))
+            $errors['email'] = 'Invalid email format.';
+
+        $profile_image = $existing['profile_image'] ?? '';
+        if (isset($_FILES['profile_image']) && $_FILES['profile_image']['error'] === UPLOAD_ERR_OK) {
+            $fileSize = $_FILES['profile_image']['size'];
+            $fileType = $_FILES['profile_image']['type'];
+            $fileName = $_FILES['profile_image']['name'];
+            $fileTmpPath = $_FILES['profile_image']['tmp_name'];
+
+            if ($fileSize > 2 * 1024 * 1024) {
+                $errors['profile_image'] = 'Image size must be less than 2MB.';
+            }
+
+            $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            if (!in_array($fileType, $allowedTypes)) {
+                $errors['profile_image'] = 'Invalid image format. Only JPG, PNG, GIF, and WEBP are allowed.';
+            }
+
+            if (empty($errors)) {
+                $uploadDir = __DIR__ . '/../uploads/users/';
+                if (!file_exists($uploadDir))
+                    mkdir($uploadDir, 0777, true);
+                $fileExtension = pathinfo($fileName, PATHINFO_EXTENSION);
+                $newFileName = uniqid('user_', true) . '.' . $fileExtension;
+                $destPath = $uploadDir . $newFileName;
+
+                if (move_uploaded_file($fileTmpPath, $destPath)) {
+                    // delete old image
+                    if (!empty($existing['profile_image'])) {
+                        $oldPath = __DIR__ . '/..' . $existing['profile_image'];
+                        if (file_exists($oldPath)) unlink($oldPath);
+                    }
+                    $profile_image = '/uploads/users/' . $newFileName;
+                }
+            }
+        }
+
+        if (!empty($errors)) {
+            if (isset($_GET['ajax'])) {
+                header('Content-Type: application/json');
+                echo json_encode(['status' => 'error', 'message' => 'Please fix the errors below.', 'errors' => $errors]);
+                exit;
+            }
+            die(implode("\n", $errors));
+        }
+
+        try {
+            $stmt = $pdo->prepare("UPDATE users SET firstname = :firstname, lastname = :lastname, email = :email, phone = :phone, address = :address, course = :course, duration_of_course = :duration_of_course, resumption_date = :resumption_date, cert_code = :cert_code, profile_image = :profile_image WHERE id = :id");
+            $stmt->execute([
+                ':firstname' => $firstname,
+                ':lastname' => $lastname,
+                ':email' => $email ?: null,
+                ':phone' => $phone ?: null,
+                ':address' => $address ?: null,
+                ':course' => $course ?: null,
+                ':duration_of_course' => $duration_of_course ?: null,
+                ':resumption_date' => $resumption_date ?: null,
+                ':cert_code' => $cert_code ?: null,
+                ':profile_image' => $profile_image ?: null,
+                ':id' => $id
+            ]);
+
+            // Update certificate owners if changed
+            $fullName = $firstname . ' ' . $lastname;
+            if (!empty($existing['cert_code']) && $existing['cert_code'] !== $cert_code) {
+                // clear previous certificate owner
+                $clearStmt = $pdo->prepare("UPDATE certificates SET owner = '' WHERE cert_code = :code");
+                $clearStmt->execute([':code' => $existing['cert_code']]);
+            }
+            if ($cert_code) {
+                $updateCert = $pdo->prepare("UPDATE certificates SET owner = :owner WHERE cert_code = :cert_code");
+                $updateCert->execute([':owner' => $fullName, ':cert_code' => $cert_code]);
+            }
+
+            if (isset($_GET['ajax'])) {
+                header('Content-Type: application/json');
+                echo json_encode(['status' => 'success', 'message' => 'User updated successfully!']);
+                exit;
+            }
+            header("Location: /admin/users.html?success=user_updated");
+            exit;
+        }
+        catch (PDOException $e) {
+            $error = "Database error: " . $e->getMessage();
+            if (isset($_GET['ajax'])) {
+                header('Content-Type: application/json');
+                echo json_encode(['status' => 'error', 'message' => $error]);
+                exit;
+            }
+            die($error);
+        }
+    }
 }
 
 if ($action === 'get_dashboard_data') {
@@ -391,6 +525,41 @@ if ($action === 'get_users_data') {
         exit;
     }
 }
+
+    if ($action === 'get_user') {
+        if (!isLoggedIn()) {
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
+            exit;
+        }
+
+        $id = $_GET['id'] ?? '';
+        if (!$id) {
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'error', 'message' => 'Missing id']);
+            exit;
+        }
+
+        try {
+            $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+            $stmt->execute([$id]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$user) {
+                header('Content-Type: application/json');
+                echo json_encode(['status' => 'error', 'message' => 'User not found']);
+                exit;
+            }
+
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'success', 'user' => $user]);
+            exit;
+        }
+        catch (PDOException $e) {
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+            exit;
+        }
+    }
 
 if ($action === 'delete_user') {
     if (!isLoggedIn()) {

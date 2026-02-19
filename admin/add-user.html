@@ -338,6 +338,52 @@
             }
         }
         fetchAdminProfile()
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const editId = urlParams.get('id');
+        let submitEndpoint = '/backend/backend.php?action=add_user&ajax=1';
+        if (editId) {
+            submitEndpoint = '/backend/backend.php?action=edit_user&id=' + encodeURIComponent(editId) + '&ajax=1';
+            // Update UI for edit mode
+            document.querySelector('.page-title').innerText = 'Edit User';
+            const breadcrumbActive = document.querySelector('.breadcrumb .breadcrumb-item.active');
+            if (breadcrumbActive) breadcrumbActive.innerText = 'Edit User';
+            const submitBtn = document.querySelector('#addUserForm button[type="submit"]');
+            if (submitBtn) submitBtn.innerText = 'Update';
+            // Make profile image optional for edit
+            const profileInput = document.getElementById('profile_image_input');
+            if (profileInput) profileInput.removeAttribute('required');
+
+            // Fetch user data and prefill
+            fetch('/backend/backend.php?action=get_user&id=' + encodeURIComponent(editId))
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'success' && data.user) {
+                        const u = data.user;
+                        document.getElementById('firstname').value = u.firstname || '';
+                        document.getElementById('lastname').value = u.lastname || '';
+                        document.getElementById('email').value = u.email || '';
+                        document.getElementById('phone').value = u.phone || '';
+                        document.getElementById('address').value = u.address || '';
+                        document.getElementById('course').value = u.course || '';
+                        document.getElementById('duration_of_course').value = u.duration_of_course || '';
+                        document.getElementById('resumption_date').value = u.resumption_date || '';
+                        document.getElementById('cert_code').value = u.cert_code || '';
+                        if (u.profile_image) {
+                            imagePreview.src = u.profile_image;
+                            imagePreview.style.display = 'block';
+                            uploadPlaceholder.style.display = 'none';
+                        }
+                    } else {
+                        Swal.fire('Error', data.message || 'Unable to fetch user data', 'error');
+                    }
+                })
+                .catch(err => {
+                    console.error('Error fetching user:', err);
+                    Swal.fire('Error', 'Unable to fetch user data', 'error');
+                });
+        }
+
         document.getElementById('addUserForm').addEventListener('submit', function (e) {
             e.preventDefault();
             const submitBtn = this.querySelector('button[type="submit"]');
@@ -352,7 +398,7 @@
             // Re-fetch form data ensures multiple files aren't an issue if they existed
             // But here we rely on the fileInput.files being set in handleFiles
 
-            fetch('/backend/backend.php?action=add_user&ajax=1', {
+            fetch(submitEndpoint, {
                 method: 'POST',
                 body: formData
             })
