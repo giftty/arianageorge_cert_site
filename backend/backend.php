@@ -134,7 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $expiration_date = $_POST['expiration_date'] ?? null;
         $event = $_POST['event'] ?? '';
 
-        if ($owner) {
+        if ($cert_type && $date_issued && $expiration_date) {
             try {
                 $pdo->beginTransaction();
 
@@ -402,10 +402,30 @@ if ($action === 'delete_user') {
     $id = $_GET['id'] ?? '';
     if ($id) {
         try {
+            // Fetch linked cert_code and profile image before deleting
+            $certStmt = $pdo->prepare("SELECT cert_code, profile_image FROM users WHERE id = ?");
+            $certStmt->execute([$id]);
+            $linkedData = $certStmt->fetch(PDO::FETCH_ASSOC);
+
+            // Delete profile image from disk if it exists
+            if ($linkedData && !empty($linkedData['profile_image'])) {
+                $imgPath = __DIR__ . '/..' . $linkedData['profile_image'];
+                if (file_exists($imgPath))
+                    unlink($imgPath);
+            }
+
+            // Delete the user
             $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
             $stmt->execute([$id]);
+
+            // Cascade: delete linked certificate
+            if ($linkedData && !empty($linkedData['cert_code'])) {
+                $delCert = $pdo->prepare("DELETE FROM certificates WHERE cert_code = ?");
+                $delCert->execute([$linkedData['cert_code']]);
+            }
+
             header('Content-Type: application/json');
-            echo json_encode(['status' => 'success', 'message' => 'User deleted successfully.']);
+            echo json_encode(['status' => 'success', 'message' => 'User and linked certificate deleted successfully.']);
             exit;
         }
         catch (PDOException $e) {
@@ -426,10 +446,28 @@ if ($action === 'delete_certificate') {
     $code = $_GET['code'] ?? '';
     if ($code) {
         try {
+            // Fetch linked user before deleting the certificate
+            $userStmt = $pdo->prepare("SELECT * FROM users WHERE cert_code = ?");
+            $userStmt->execute([$code]);
+            $linkedUser = $userStmt->fetch(PDO::FETCH_ASSOC);
+
+            // Delete the certificate
             $stmt = $pdo->prepare("DELETE FROM certificates WHERE cert_code = ?");
             $stmt->execute([$code]);
+
+            // Cascade: delete linked user and their profile image
+            if ($linkedUser) {
+                if (!empty($linkedUser['profile_image'])) {
+                    $imgPath = __DIR__ . '/..' . $linkedUser['profile_image'];
+                    if (file_exists($imgPath))
+                        unlink($imgPath);
+                }
+                $delUser = $pdo->prepare("DELETE FROM users WHERE id = ?");
+                $delUser->execute([$linkedUser['id']]);
+            }
+
             header('Content-Type: application/json');
-            echo json_encode(['status' => 'success', 'message' => 'Certificate deleted successfully.']);
+            echo json_encode(['status' => 'success', 'message' => 'Certificate and linked user deleted successfully.']);
             exit;
         }
         catch (PDOException $e) {

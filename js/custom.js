@@ -126,26 +126,26 @@ $(function(){
 				margin: 10,
 				autoplay: true,
 				smartSpeed: 700,
-				items: 4,
+				items: 6,
 				stagePadding: 0,
 				nav: true,
 				dots: true,
 				navText: ['<span class="icon-keyboard_backspace"></span>','<span class="icon-keyboard_backspace"></span>'],
 				responsive:{
 					0:{
-						items:1
-					},
-					600:{
-						items:1
-					},
-					800: {
 						items:2
 					},
-					1000:{
+					600:{
+						items:2
+					},
+					800: {
 						items:3
 					},
+					1000:{
+						items:4
+					},
 					1100:{
-						items:5
+						items:6
 					}
 				}
 			});

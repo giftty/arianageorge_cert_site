@@ -2949,10 +2949,11 @@ h4,
 
 /* Custom styles */
 .owl-logos .item img {
-  filter: grayscale(100%);
+  /* filter: grayscale(100%);
   -webkit-filter: grayscale(100%);
   transition: .3s all ease;
-  -webkit-transition: .3s all ease;
+  -webkit-transition: .3s all ease; */
+   width:65% 
 }
 
 .owl-logos .item img:hover {

@@ -157,7 +157,7 @@ $cert_code = isset($_GET['code']) ? $_GET['code'] : '';
       <div class="col-lg-8 mx-auto">
         <div class="text-center mb-5">
           <a href="index.html">
-            <img src="images/ariana_icon.png" alt="Logo" style="width:200px; height:auto;">
+            <img src="images/ariana_icon_dark.png" alt="Logo" style="width:200px; height:auto;">
           </a>
         </div>
         

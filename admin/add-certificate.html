@@ -5,7 +5,7 @@
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>Plus Admin - Add Certificate</title>
+    <title>Ariana admin - Manage Users</title>
     <!-- plugins:css -->
     <link rel="stylesheet" href="/admin/assets/vendors/mdi/css/materialdesignicons.min.css">
     <link rel="stylesheet" href="/admin/assets/vendors/ti-icons/css/themify-icons.css">
@@ -13,6 +13,8 @@
     <link rel="stylesheet" href="/admin/assets/vendors/font-awesome/css/font-awesome.min.css">
     <!-- endinject -->
     <!-- Plugin css for this page -->
+    <link rel="stylesheet" href="/admin/assets/vendors/jquery-bar-rating/css-stars.css">
+    <link rel="stylesheet" href="/admin/assets/vendors/font-awesome/css/font-awesome.min.css">
     <!-- End plugin css for this page -->
     <!-- inject:css -->
     <!-- endinject -->
@@ -27,40 +29,48 @@
 <body>
     <div class="container-scroller">
         <!-- partial:partials/_sidebar.html -->
-        <nav class="sidebar sidebar-offcanvas" id="sidebar">
-            <ul class="nav">
-                <li class="nav-item nav-profile border-bottom">
-                    <a href="#" class="nav-link flex-column">
-                        <div class="nav-profile-image">
-                            <img src="/admin/assets/images/faces/face1.jpg" alt="profile">
-                        </div>
-                        <div class="nav-profile-text d-flex ms-0 mb-3 flex-column">
-                            <span class="fw-semibold mb-1 mt-2 text-center">Antonio Olson</span>
-                            <span class="text-secondary icon-sm text-center">$3499.00</span>
-                        </div>
-                    </a>
-                </li>
-                <li class="nav-item pt-3">
-                    <a class="nav-link d-block" href="/admin/index.html">
-                        <img class="sidebar-brand-logo" src="/images/ariana_icon.png" alt="">
-                        <img class="sidebar-brand-logomini" src="/admin/assets/images/logo-mini.svg" alt="">
-                        <div class="small fw-light pt-1">Responsive Dashboard </div>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/admin/index.html">
-                        <i class="mdi mdi-certificate menu-icon"></i>
-                        <span class="menu-title">Manage Certificates</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/admin/users.html">
-                        <i class="mdi mdi-account-group menu-icon"></i>
-                        <span class="menu-title">Manage Users</span>
-                    </a>
-                </li>
-            </ul>
-        </nav>
+            <nav class="sidebar sidebar-offcanvas" id="sidebar">
+      <ul class="nav">
+        <li class="nav-item nav-profile border-bottom">
+          <a href="#" class="nav-link flex-column">
+            <div class="nav-profile-image">
+              <img id="sidebarAdminAvatar" src="/admin/assets/images/faces-clipart/pic-4.png" alt="profile">
+            </div>
+            <div class="nav-profile-text d-flex ms-0 mb-3 flex-column">
+              <span class="fw-semibold mb-1 mt-2 text-center" id="sidebarAdminName">Loading...</span>
+              <span class="text-secondary icon-sm text-center">Administrator</span>
+            </div>
+          </a>
+        </li>
+        <li class="nav-item pt-3">
+          <a class="nav-link d-block" href="index.html">
+            <img class="sidebar-brand-logo" src="/images/ariana_icon.png" alt="">
+            <img class="sidebar-brand-logomini" src="/admin/assets/images/logo-mini.svg" alt="">
+            <div class="small fw-light pt-1">Responsive Dashboard </div>
+          </a>
+          <form class="d-flex align-items-center" action="#">
+            <div class="input-group">
+              <div class="input-group-prepend">
+                <i class="input-group-text border-0 mdi mdi-magnify"></i>
+              </div>
+              <input type="text" class="form-control border-0" placeholder="Search">
+            </div>
+          </form>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/admin/index.html">
+            <i class="mdi mdi-certificate menu-icon"></i>
+            <span class="menu-title">Manage Certificates</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/admin/users.html">
+            <i class="mdi mdi-account-group menu-icon"></i>
+            <span class="menu-title">Manage Users</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
         <!-- partial -->
         <div class="container-fluid page-body-wrapper">
             <!-- partial:partials/_navbar.html -->
@@ -75,14 +85,23 @@
                                 src="/admin/assets/images/logo-mini.svg" alt="logo" /></a>
                     </div>
                     <ul class="navbar-nav navbar-nav-right">
-                        <li class="nav-item nav-profile dropdown d-none d-md-block">
-                            <a class="nav-link" id="profileDropdown" href="#" data-bs-toggle="dropdown"
-                                aria-expanded="false">
-                                <div class="nav-profile-text">English </div>
+                        <li class="nav-item nav-profile dropdown d-none d-md-block me-3">
+                            <a class="nav-link dropdown-toggle" id="adminProfileDropdown" href="#"
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                                <img id="navbarAdminAvatar" src="/admin/assets/images/faces-clipart/pic-4.png" alt="profile"
+                                  style="width:32px;height:32px;border-radius:50%;object-fit:cover;margin-right:8px;">
+                                <span id="navbarAdminName" class="fw-semibold">Admin</span>
                             </a>
+                            <div class="dropdown-menu dropdown-menu-right navbar-dropdown"
+                                aria-labelledby="adminProfileDropdown">
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item text-danger" href="#" id="logoutBtn">
+                                    <i class="mdi mdi-logout me-2"></i> Logout
+                                </a>
+                            </div>
                         </li>
                         <li class="nav-item nav-logout d-none d-lg-block">
-                            <a class="nav-link" href="/admin/index.html">
+                            <a class="nav-link" href="/">
                                 <i class="mdi mdi-home-circle"></i>
                             </a>
                         </li>
@@ -116,7 +135,7 @@
                                         <div class="form-group">
                                             <label for="owner">Owner Name</label>
                                             <input type="text" class="form-control" id="owner" name="owner"
-                                                placeholder="Enter Owner Name" required>
+                                                placeholder="Enter Owner Name">
                                         </div>
                                         <div class="form-group">
                                             <label for="cert_type">Certificate Type</label>
@@ -164,11 +183,13 @@
                     </div>
                 </div>
                 <!-- content-wrapper ends -->
-                <footer class="footer">
+                 <footer class="footer">
                     <div class="d-sm-flex justify-content-center justify-content-sm-between">
-                        <span class="text-muted text-center text-sm-left d-block d-sm-inline-block">Copyright © 2023 <a
-                                href="https://www.bootstrapdash.com/" target="_blank">BootstrapDash</a>. All rights
-                            reserved.</span>
+                        <span class="text-muted text-center text-sm-left d-block d-sm-inline-block">Copyright &copy;
+                        <script>document.write(new Date().getFullYear());</script>. All Rights Reserved. &mdash; <a
+                            href="#">arianageorgegroup</a>
+                        </span>
+                    
                     </div>
                 </footer>
             </div>
@@ -188,6 +209,7 @@
     <script src="/admin/assets/js/hoverable-collapse.js"></script>
     <!-- endinject -->
     <script>
+         fetchAdminProfile();
         document.getElementById('addCertificateForm').addEventListener('submit', function (e) {
             e.preventDefault();
             const submitBtn = this.querySelector('button[type="submit"]');
@@ -238,6 +260,24 @@
                     submitBtn.innerHTML = originalBtnText;
                 });
         });
+        function fetchAdminProfile() {
+            fetch('/backend/backend.php?action=check_auth')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'authorized') {
+                        const name = data.username || 'Admin';
+                        document.getElementById('sidebarAdminName').innerText = name;
+                        document.getElementById('navbarAdminName').innerText = name;
+                        // No profile image in DB — use default avatar
+                        const defaultAvatar = '/admin/assets/images/faces-clipart/profile_default.png';
+                        document.getElementById('sidebarAdminAvatar').src = defaultAvatar;
+                        document.getElementById('navbarAdminAvatar').src = defaultAvatar;
+                    } else {
+                        window.location.href = '/admin/login.html';
+                    }
+                })
+                .catch(() => { window.location.href = '/admin/login.html'; });
+        }
     </script>
 </body>
 

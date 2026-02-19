@@ -22,7 +22,7 @@ try {
     if ($cert) {
         $_SESSION['view_cert_code'] = $cert_code;
         $_SESSION['view_cert_timestamp'] = time();
-        $has_owner = !empty($cert['owner']);
+        $has_owner = !empty($cert['owner'])&& strlen($cert['owner'])>2;
         echo json_encode(['status' => 'success', 'message' => 'Certificate found.', 'has_owner' => $has_owner]);
     }
     else {
