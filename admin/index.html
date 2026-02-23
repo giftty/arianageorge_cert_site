@@ -65,6 +65,12 @@
           </a>
         </li>
         <li class="nav-item">
+          <a class="nav-link" href="/admin/messages.html">
+            <i class="mdi mdi-email menu-icon"></i>
+            <span class="menu-title">Messages</span>
+          </a>
+        </li>
+        <li class="nav-item">
           <a class="nav-link" href="/admin/users.html">
             <i class="mdi mdi-account-group menu-icon"></i>
             <span class="menu-title">Manage Users</span>
@@ -329,6 +335,19 @@
       const paginatedItems = allCertificates.slice(start, end);
 
       paginatedItems.forEach(cert => {
+        const status = (cert.status || cert.generated_status || 'not active').toString().toLowerCase();
+        const statusClassMap = {
+          'active': 'badge-success',
+          'not active': 'badge-secondary',
+          'not-active': 'badge-secondary',
+          'generated': 'badge-success',
+          'revoked': 'badge-danger',
+          'expired': 'badge-dark',
+          'suspended': 'badge-warning'
+        };
+        const badgeClass = statusClassMap[status] || 'badge-warning';
+        const displayStatus = (status === 'not-active') ? 'not active' : status;
+
         const row = `
                   <tr>
                     <td>${cert.cert_code}</td>
@@ -339,8 +358,8 @@
                     <td>${cert.event || 'N/A'}</td>
                     <td>${cert.created_at}</td>
                     <td>
-                      <span class="badge ${cert.generated_status === 'generated' ? 'badge-success' : 'badge-warning'}">
-                        ${cert.generated_status || 'not-generated'}
+                      <span class="badge ${badgeClass}">
+                        ${displayStatus || 'not active'}
                       </span>
                     </td>
                     <td>${cert.views}</td>
@@ -350,7 +369,7 @@
                       <button class="btn btn-sm btn-success" onclick="downloadCert('${cert.cert_code}')" title="Download"><i class="mdi mdi-download"></i></button>
                       <button class="btn btn-sm btn-primary" onclick="editCert('${cert.cert_code}')" title="Edit"><i class="mdi mdi-pencil"></i></button>
                       <button class="btn btn-sm btn-danger" onclick="deleteCert('${cert.cert_code}')" title="Delete"><i class="mdi mdi-delete"></i></button>
-                      <!-- ${cert.generated_status !== 'generated' ? `<button class="btn btn-sm btn-warning" onclick="generateCert('${cert.cert_code}')" title="Generate Certificate"><i class="mdi mdi-file-certificate"></i></button>` : ''} -->
+                      <button class="btn btn-sm btn-secondary" onclick="changeStatus('${cert.cert_code}','${displayStatus}')" title="Change Status"><i class="mdi mdi-swap-vertical"></i></button>
                     </td>
                   </tr>
                 `;
@@ -396,6 +415,59 @@
       if (page < 1 || page > totalPages) return;
       currentPage = page;
       displayCertificates();
+    }
+
+    function changeStatus(code, currentStatus) {
+      const options = {
+        'active': 'Active',
+        'not active': 'Not Active',
+        'revoked': 'Revoked',
+        'expired': 'Expired',
+        'suspended': 'Suspended'
+      };
+
+      Swal.fire({
+        title: 'Change Certificate Status',
+        input: 'select',
+        inputOptions: options,
+        inputValue: (currentStatus || 'not active').toString().toLowerCase(),
+        showCancelButton: true,
+        confirmButtonText: 'Update Status',
+        cancelButtonText: 'Cancel'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          const newStatus = result.value;
+          fetch('/backend/backend.php?action=update_certificate_status&code=' + encodeURIComponent(code) + '&status=' + encodeURIComponent(newStatus))
+            .then(res => res.json())
+            .then(data => {
+              if (data.status === 'success') {
+                Swal.fire({
+                  icon: 'success',
+                  title: 'Updated',
+                  text: data.message || 'Status updated.',
+                  confirmButtonColor: '#007bff'
+                });
+                fetchDashboardData();
+              } else {
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Error',
+                  text: data.message || 'Failed to update status.',
+                  confirmButtonColor: '#dc3545'
+                });
+              }
+            })
+            .catch(err => {
+              console.error('Error:', err);
+              Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'An error occurred while updating status.',
+                confirmButtonColor: '#dc3545'
+              });
+            });
+        }
+      });
     }
 
     function generateCert(code) {

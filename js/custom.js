@@ -133,16 +133,16 @@ $(function(){
 				navText: ['<span class="icon-keyboard_backspace"></span>','<span class="icon-keyboard_backspace"></span>'],
 				responsive:{
 					0:{
-						items:2
-					},
-					600:{
-						items:2
-					},
-					800: {
 						items:3
 					},
-					1000:{
+					600:{
 						items:4
+					},
+					800: {
+						items:5
+					},
+					1000:{
+						items:5
 					},
 					1100:{
 						items:6

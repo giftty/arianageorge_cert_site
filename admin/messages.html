@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Messages - Admin</title>
+  <link rel="stylesheet" href="/admin/assets/vendors/mdi/css/materialdesignicons.min.css">
+  <link rel="stylesheet" href="/admin/assets/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    .chat-container {
+      display: flex;
+      height: calc(100vh - 200px);
+      gap: 0;
+      background: #f5f5f5;
+    }
+    .chat-sidebar {
+      width: 35%;
+      background: #fff;
+      border-right: 1px solid #ddd;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    .chat-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+    }
+    .message-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 0;
+    }
+    .message-item {
+      padding: 12px 16px;
+      border-left: 3px solid transparent;
+      cursor: pointer;
+      border-bottom: 1px solid #eee;
+      transition: all 0.2s;
+    }
+    .message-item:hover {
+      background: #f9f9f9;
+      border-left-color: #2196F3;
+    }
+    .message-item.active {
+      background: #e3f2fd;
+      border-left-color: #2196F3;
+    }
+    .message-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .message-item-name {
+      font-weight: 600;
+      color: #333;
+      font-size: 14px;
+    }
+    .message-item-time {
+      font-size: 12px;
+      color: #999;
+    }
+    .message-item-email {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 4px;
+    }
+    .message-item-preview {
+      font-size: 13px;
+      color: #666;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .message-item-status {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+    .status-waiting {
+      background: #fff3cd;
+      color: #856404;
+    }
+    .status-read {
+      background: #d4edda;
+      color: #155724;
+    }
+    .chat-header {
+      padding: 16px;
+      border-bottom: 1px solid #ddd;
+      background: #fff;
+    }
+    .chat-header-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .chat-header-detail h4 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .chat-header-detail p {
+      margin: 4px 0 0 0;
+      font-size: 13px;
+      color: #666;
+    }
+    .chat-header-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .chat-header-actions button {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .message-bubble {
+      display: flex;
+      flex-direction: column;
+      max-width: 70%;
+      gap: 4px;
+    }
+    .message-bubble.incoming {
+      align-self: flex-start;
+    }
+    .message-bubble.outgoing {
+      align-self: flex-end;
+    }
+    .message-content {
+      padding: 10px 14px;
+      border-radius: 12px;
+      word-wrap: break-word;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    .message-bubble.incoming .message-content {
+      background: #e3f2fd;
+      color: #333;
+      border-radius: 12px 12px 12px 0;
+    }
+    .message-bubble.outgoing .message-content {
+      background: #2196F3;
+      color: #fff;
+      border-radius: 12px 12px 0 12px;
+    }
+    .message-timestamp {
+      font-size: 12px;
+      color: #999;
+      padding: 0 4px;
+    }
+    .message-bubble.incoming .message-timestamp {
+      text-align: left;
+    }
+    .message-bubble.outgoing .message-timestamp {
+      text-align: right;
+    }
+    .chat-input-area {
+      padding: 16px;
+      border-top: 1px solid #ddd;
+      background: #fff;
+    }
+    .reply-form {
+      display: flex;
+      gap: 8px;
+      flex-direction: column;
+    }
+    .reply-textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-family: Arial, sans-serif;
+      resize: vertical;
+      min-height: 60px;
+    }
+    .reply-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+    .empty-state {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #999;
+      font-size: 16px;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .empty-state-icon {
+      font-size: 48px;
+      opacity: 0.3;
+    }
+    @media (max-width: 768px) {
+      .chat-container {
+        flex-direction: column;
+      }
+      .chat-sidebar {
+        width: 100%;
+        max-height: 40vh;
+      }
+      .message-bubble {
+        max-width: 90%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container-scroller">
+    <nav class="sidebar sidebar-offcanvas" id="sidebar">
+      <ul class="nav">
+        <li class="nav-item nav-profile border-bottom">
+          <a href="#" class="nav-link flex-column">
+            <div class="nav-profile-image">
+              <img id="sidebarAdminAvatar" src="/admin/assets/images/faces-clipart/pic-4.png" alt="profile">
+            </div>
+            <div class="nav-profile-text d-flex ms-0 mb-3 flex-column">
+              <span class="fw-semibold mb-1 mt-2 text-center" id="sidebarAdminName">Loading...</span>
+              <span class="text-secondary icon-sm text-center">Administrator</span>
+            </div>
+          </a>
+        </li>
+        <li class="nav-item pt-3">
+          <a class="nav-link d-block" href="index.html">
+            <img class="sidebar-brand-logo" src="/images/ariana_icon.png" alt="">
+            <img class="sidebar-brand-logomini" src="/admin/assets/images/logo-mini.svg" alt="">
+            <div class="small fw-light pt-1">Responsive Dashboard </div>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/admin/index.html">
+            <i class="mdi mdi-certificate menu-icon"></i>
+            <span class="menu-title">Manage Certificates</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/admin/users.html">
+            <i class="mdi mdi-account-group menu-icon"></i>
+            <span class="menu-title">Manage Users</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/admin/messages.html">
+            <i class="mdi mdi-email menu-icon"></i>
+            <span class="menu-title">Messages</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+    <div class="container-fluid page-body-wrapper">
+         <!-- partial:partials/_navbar.html -->
+            <nav class="navbar default-layout-navbar col-lg-12 col-12 p-0 fixed-top d-flex flex-row">
+                <div class="navbar-menu-wrapper d-flex align-items-stretch">
+                    <button class="navbar-toggler navbar-toggler align-self-center" type="button"
+                        data-toggle="minimize">
+                        <span class="mdi mdi-chevron-double-left"></span>
+                    </button>
+                    <div class="text-center navbar-brand-wrapper d-flex align-items-center justify-content-center">
+                        <a class="navbar-brand brand-logo-mini" href="/admin/index.html"><img
+                                src="/admin/assets/images/logo-mini.svg" alt="logo" /></a>
+                    </div>
+                    <ul class="navbar-nav navbar-nav-right">
+                        <li class="nav-item nav-profile dropdown d-none d-md-block me-3">
+                            <a class="nav-link dropdown-toggle" id="adminProfileDropdown" href="#"
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                                <img id="navbarAdminAvatar" src="/admin/assets/images/faces-clipart/pic-4.png" alt="profile"
+                                  style="width:32px;height:32px;border-radius:50%;object-fit:cover;margin-right:8px;">
+                                <span id="navbarAdminName" class="fw-semibold">Admin</span>
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-right navbar-dropdown"
+                                aria-labelledby="adminProfileDropdown">
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item text-danger" href="#" id="logoutBtn">
+                                    <i class="mdi mdi-logout me-2"></i> Logout
+                                </a>
+                            </div>
+                        </li>
+                        <li class="nav-item nav-logout d-none d-lg-block">
+                            <a class="nav-link" href="/">
+                                <i class="mdi mdi-home-circle"></i>
+                            </a>
+                        </li>
+                    </ul>
+                    <button class="navbar-toggler navbar-toggler-right d-lg-none align-self-center" type="button"
+                        data-toggle="offcanvas">
+                        <span class="mdi mdi-menu"></span>
+                    </button>
+                </div>
+            </nav>
+            <!-- partial -->
+      <div class="main-panel">
+        <div class="content-wrapper pb-0" style="padding: 0;">
+          <div class="chat-container">
+            <!-- Sidebar: Message List -->
+            <div class="chat-sidebar">
+              <div style="padding: 16px; border-bottom: 1px solid #ddd;">
+                <h4 style="margin: 0; font-size: 18px; font-weight: 600;">Messages</h4>
+              </div>
+              <div class="message-list" id="messageList">
+                <!-- Messages will be populated here -->
+              </div>
+            </div>
+
+            <!-- Main: Chat View -->
+            <div class="chat-main">
+              <div id="chatView" class="empty-state">
+                <div class="empty-state-icon">💬</div>
+                <div>Select a message to view</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reply Modal (kept for compatibility, though chat input will be primary) -->
+  <div class="modal fade" id="replyModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Reply to Message</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group mb-3">
+            <label><strong>Recipient:</strong></label>
+            <p id="replyRecipient" style="background-color:#f5f5f5;padding:8px;border-radius:4px;"></p>
+          </div>
+          <div class="form-group">
+            <label for="replyText"><strong>Your Reply:</strong></label>
+            <textarea id="replyText" class="form-control" rows="8" placeholder="Type your reply message here..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary" id="sendReplyBtn" onclick="sendReply()">Send Reply</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/admin/assets/vendors/js/vendor.bundle.base.js"></script>
+  <script src="/admin/assets/js/off-canvas.js"></script>
+  <script src="/admin/assets/js/misc.js"></script>
+  <script>
+    let allMessages = [];
+    let currentMessageId = null;
+    document.addEventListener('DOMContentLoaded', function () {
+            fetchAdminProfile();
+            fetchUsersData();
+
+            document.getElementById('logoutBtn').addEventListener('click', function (e) {
+                e.preventDefault();
+                Swal.fire({
+                    title: 'Logout?',
+                    text: 'Are you sure you want to log out?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc3545',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Yes, logout'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        fetch('/backend/backend.php?action=logout')
+                            .then(res => res.json())
+                            .then(data => { window.location.href = data.redirect || '/admin/login.html'; })
+                            .catch(() => { window.location.href = '/admin/login.html'; });
+                    }
+                });
+            });
+        });
+        function fetchAdminProfile() {
+            fetch('/backend/backend.php?action=check_auth')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'authorized') {
+                        const name = data.username || 'Admin';
+                        document.getElementById('sidebarAdminName').innerText = name;
+                        document.getElementById('navbarAdminName').innerText = name;
+                        // No profile image in DB — use default avatar
+                        const defaultAvatar = '/admin/assets/images/faces-clipart/profile_default.png';
+                        document.getElementById('sidebarAdminAvatar').src = defaultAvatar;
+                        document.getElementById('navbarAdminAvatar').src = defaultAvatar;
+                    } else {
+                        window.location.href = '/admin/login.html';
+                    }
+                })
+                .catch(() => { window.location.href = '/admin/login.html'; });
+        }
+    document.addEventListener('DOMContentLoaded', function() {
+      fetchMessages();
+    });
+
+    function fetchMessages() {
+      fetch('/backend/backend.php?action=get_messages')
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === 'success') {
+            allMessages = data.messages || [];
+            renderMessageList();
+            if (allMessages.length > 0) {
+              selectMessage(allMessages[0].id);
+            }
+          } else {
+            console.error('Failed to fetch messages', data);
+          }
+        }).catch(err => console.error(err));
+    }
+
+    function renderMessageList() {
+      const list = document.getElementById('messageList');
+      list.innerHTML = '';
+      allMessages.forEach(msg => {
+        const statusClass = msg.status === 'waiting' ? 'status-waiting' : 'status-read';
+        const statusText = msg.status === 'waiting' ? 'Waiting' : 'Read';
+        const item = document.createElement('div');
+        item.className = 'message-item' + (currentMessageId === msg.id ? ' active' : '');
+        item.innerHTML = `
+          <div class="message-item-header">
+            <span class="message-item-name">${msg.name}</span>
+            <span class="message-item-time">${new Date(msg.created_at).toLocaleDateString()}</span>
+          </div>
+          <div class="message-item-email">${msg.email}</div>
+          <div class="message-item-preview">${msg.message.substring(0, 50)}...</div>
+          <span class="message-item-status ${statusClass}">${statusText}</span>
+        `;
+        item.addEventListener('click', () => selectMessage(msg.id));
+        list.appendChild(item);
+      });
+    }
+
+    function selectMessage(id) {
+      currentMessageId = id;
+      renderMessageList();
+      renderChatView();
+    }
+
+    function renderChatView() {
+      const msg = allMessages.find(m => m.id === currentMessageId);
+      if (!msg) return;
+
+      const chatView = document.getElementById('chatView');
+      const timestamp = new Date(msg.created_at).toLocaleString();
+      
+      chatView.innerHTML = `
+        <div style="display: flex; flex-direction: column; height: 100%;">
+          <div class="chat-header">
+            <div class="chat-header-info">
+              <div class="chat-header-detail">
+                <h4>${msg.name}</h4>
+                <p>${msg.email}</p>
+                <p style="margin-top: 8px; font-size: 12px; color: #999;">Received: ${timestamp}</p>
+              </div>
+              <div class="chat-header-actions">
+                <button class="btn btn-sm btn-secondary" onclick="deleteMessage(${msg.id})">Delete</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="chat-messages">
+            <div class="message-bubble incoming">
+              <div class="message-content">${msg.message}</div>
+              <div class="message-timestamp">${timestamp}</div>
+            </div>
+          </div>
+
+          <div class="chat-input-area">
+            <div class="reply-form">
+              <textarea class="reply-textarea" id="quickReplyText" placeholder="Type your reply here..."></textarea>
+              <div class="reply-actions">
+                <button class="btn btn-primary btn-sm" onclick="quickSendReply(${msg.id})">Send Reply</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function quickSendReply(messageId) {
+      const textarea = document.getElementById('quickReplyText');
+      const replyText = textarea.value.trim();
+      if (!replyText) {
+        Swal.fire('Error', 'Please type a reply.', 'error');
+        return;
+      }
+
+      const btn = event.target;
+      btn.disabled = true;
+      const origText = btn.innerHTML;
+      btn.innerHTML = '<i class="spinner-border spinner-border-sm me-2"></i> Sending...';
+
+      fetch('/backend/backend.php?action=send_reply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `message_id=${messageId}&reply_text=${encodeURIComponent(replyText)}`
+      }).then(r => r.json()).then(data => {
+        btn.disabled = false;
+        btn.innerHTML = origText;
+        if (data.status === 'success') {
+          Swal.fire({ icon: 'success', title: 'Sent', text: 'Reply sent successfully!' });
+          textarea.value = '';
+          fetchMessages();
+        } else {
+          Swal.fire('Error', data.message || 'Failed to send reply.', 'error');
+        }
+      }).catch(err => {
+        btn.disabled = false;
+        btn.innerHTML = origText;
+        Swal.fire('Error', 'Network error. Please try again.', 'error');
+      });
+    }
+
+    function deleteMessage(id) {
+      Swal.fire({
+        title: 'Delete message?',
+        showCancelButton: true,
+        confirmButtonText: 'Delete'
+      }).then(res => {
+        if (res.isConfirmed) {
+          fetch('/backend/backend.php?action=delete_message&id=' + id)
+            .then(r => r.json()).then(d => { 
+              if (d.status === 'success') {
+                currentMessageId = null;
+                fetchMessages();
+              }
+            });
+        }
+      });
+    }
+
+    let currentReplyMessageId = null;
+
+    function showReplyModal(id, email) {
+      currentReplyMessageId = id;
+      document.getElementById('replyRecipient').textContent = email;
+      document.getElementById('replyText').value = '';
+      const modal = new bootstrap.Modal(document.getElementById('replyModal'));
+      modal.show();
+    }
+
+    function sendReply() {
+      const replyText = document.getElementById('replyText').value.trim();
+      if (!replyText) {
+        Swal.fire('Error', 'Please enter a reply message.', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('sendReplyBtn');
+      btn.disabled = true;
+      const origText = btn.innerHTML;
+      btn.innerHTML = '<i class="spinner-border spinner-border-sm me-2"></i> Sending...';
+
+      fetch('/backend/backend.php?action=send_reply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `message_id=${currentReplyMessageId}&reply_text=${encodeURIComponent(replyText)}`
+      }).then(r => r.json()).then(data => {
+        btn.disabled = false;
+        btn.innerHTML = origText;
+        if (data.status === 'success') {
+          Swal.fire({ icon: 'success', title: 'Sent', text: 'Reply sent successfully!' });
+          bootstrap.Modal.getInstance(document.getElementById('replyModal')).hide();
+          fetchMessages();
+        } else {
+          Swal.fire('Error', data.message || 'Failed to send reply.', 'error');
+        }
+      }).catch(err => {
+        btn.disabled = false;
+        btn.innerHTML = origText;
+        Swal.fire('Error', 'Network error. Please try again.', 'error');
+      });
+    }
+  </script>
+</body>
+</html>

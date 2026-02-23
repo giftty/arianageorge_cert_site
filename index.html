@@ -64,6 +64,7 @@
                   <a href="#">Menu Two</a>
                   <ul class="dropdown">
                     <li><a href="#">Sub Menu One</a></li>
+    </script>
                     <li><a href="#">Sub Menu Two</a></li>
                     <li><a href="#">Sub Menu Three</a></li>
                   </ul>
@@ -128,9 +129,7 @@
         <div class="item p-2">
           <img src="images/client8.jpeg" alt="Image" class="img-fluid">
         </div>
-        <div class="item p-2">
-          <img src="images/client9.jpeg" alt="Image" class="img-fluid">
-        </div>
+        
         <div class="item p-2">
           <img src="images/client11.jpeg" alt="Image" class="img-fluid">
         </div>
@@ -486,12 +485,10 @@
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="contactModalLabel">Contact Us</h5>
-          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-          </button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-          <form action="#">
+          <form id="contactForm">
             <div class="row">
               <div class="col-6">
                 <div class="form-group">
@@ -515,7 +512,7 @@
               <label class="text-black" for="message">Message</label>
               <textarea name="" class="form-control" id="message" cols="30" rows="5"></textarea>
             </div>
-            <button type="submit" class="btn btn-primary">Send Message</button>
+            <button type="submit" id="contactSubmitBtn" class="btn btn-primary">Send Message</button>
           </form>
         </div>
       </div>
@@ -582,6 +579,56 @@
       e.preventDefault();
       document.getElementById('getCertBtn').click();
     });
+
+    // Contact form submit with waiting state
+    (function(){
+      const form = document.getElementById('contactForm');
+      if (!form) return;
+      const btn = document.getElementById('contactSubmitBtn');
+      form.addEventListener('submit', function(e){
+        e.preventDefault();
+        const fname = document.getElementById('fname').value.trim();
+        const lname = document.getElementById('lname').value.trim();
+        const name = (fname + ' ' + lname).trim() || 'Unknown';
+        const email = document.getElementById('email').value.trim();
+        const message = document.getElementById('message').value.trim();
+        
+        if (!email || !message) {
+          Swal.fire('Error','Please provide your email and message.','error');
+          return;
+        }
+        
+        btn.disabled = true;
+        const origText = btn.innerHTML;
+        btn.innerHTML = '<i class="spinner-border spinner-border-sm me-2"></i> Sending...';
+
+        fetch('/backend/backend.php?action=save_message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}&subject=&message=${encodeURIComponent(message)}`
+        }).then(r => r.json()).then(data => {
+          btn.disabled = false;
+          btn.innerHTML = origText;
+          if (data.status === 'success') {
+            Swal.fire({ 
+              icon: 'success', 
+              title: 'Message Sent', 
+              text: 'Thank you! Your message has been sent. We will get back to you soon.',
+              confirmButtonText: 'OK'
+            }).then(() => {
+              form.reset();
+              $('#contactModal').modal('hide');
+            });
+          } else {
+            Swal.fire('Error', data.message || 'Failed to send message.', 'error');
+          }
+        }).catch(err => {
+          btn.disabled = false;
+          btn.innerHTML = origText;
+          Swal.fire('Error', 'Network error. Please try again.', 'error');
+        });
+      });
+    })();
   </script>
 
 

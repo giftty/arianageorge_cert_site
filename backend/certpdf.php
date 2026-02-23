@@ -42,6 +42,8 @@ else {
 
 $dbFile = __DIR__ . '/data.db';
 $show_prompt = false;
+// Capture requested mode if any; actual summary/full decision will be made after we fetch the certificate
+$requested_mode = isset($_GET['mode']) ? $_GET['mode'] : null;
 
 // Initialize defaults
 $name = "---";
@@ -119,8 +121,63 @@ else {
             $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
             $host = $_SERVER['HTTP_HOST'];
             $current_url = "$protocol://$host" . $_SERVER['PHP_SELF'];
-            $verification_link = "$current_url?code=" . encryptCode($certificate_code);
+            // QR should open a summary/details view rather than the full certificate
+            $verification_link = "$current_url?code=" . encryptCode($certificate_code) . "&mode=summary";
             $qr_code = "https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=" . urlencode($verification_link);
+
+            // Decide whether to show summary or full view:
+            // - If explicit mode requested: 'summary' forces summary; 'full' allowed only for admin or owner session
+            // - If no explicit mode: default to full for admin or owner (session view_cert_code), otherwise summary
+            $is_summary = true; // safe default
+            if ($requested_mode === 'summary') {
+              $is_summary = true;
+            } elseif ($requested_mode === 'full') {
+              // allow only admin or owner who has the cert code in session
+              if (isset($_SESSION['admin_id']) || (isset($_SESSION['view_cert_code']) && $_SESSION['view_cert_code'] === $certificate_code)) {
+                $is_summary = false;
+              } else {
+                $is_summary = true; // force summary if not allowed
+              }
+            } else {
+              // no explicit mode: admin or owner sees full, others see summary
+              if (isset($_SESSION['admin_id']) || (isset($_SESSION['view_cert_code']) && $_SESSION['view_cert_code'] === $certificate_code)) {
+                $is_summary = false;
+              } else {
+                $is_summary = true;
+              }
+            }
+
+            // Track viewed/downloaded certificates per session to avoid duplicate counts
+            if (!isset($_SESSION['viewed_certs']) || !is_array($_SESSION['viewed_certs'])) {
+              $_SESSION['viewed_certs'] = [];
+            }
+            if (!isset($_SESSION['downloaded_certs']) || !is_array($_SESSION['downloaded_certs'])) {
+              $_SESSION['downloaded_certs'] = [];
+            }
+
+            // Increment view count only once per session per certificate
+            if (empty($_SESSION['viewed_certs'][$cert_code])) {
+              try {
+                $incStmt = $pdo->prepare("UPDATE certificates SET views = COALESCE(views,0) + 1 WHERE cert_code = :code");
+                $incStmt->execute([':code' => $cert_code]);
+                $_SESSION['viewed_certs'][$cert_code] = time();
+              } catch (PDOException $e) {
+                // non-fatal; continue rendering
+              }
+            }
+
+            // If this request requested a download, increment downloads counter once per session per certificate
+            if (isset($_GET['download']) && $_GET['download'] === '1') {
+              if (empty($_SESSION['downloaded_certs'][$cert_code])) {
+                try {
+                  $dlStmt = $pdo->prepare("UPDATE certificates SET downloads = COALESCE(downloads,0) + 1 WHERE cert_code = :code");
+                  $dlStmt->execute([':code' => $cert_code]);
+                  $_SESSION['downloaded_certs'][$cert_code] = time();
+                } catch (PDOException $e) {
+                  // non-fatal
+                }
+              }
+            }
         }
     }
     catch (PDOException $e) {
@@ -295,6 +352,14 @@ if ($user_profile_image && file_exists(dirname(__DIR__) . '/' . ltrim($user_prof
 endif; ?>
   }
 
+  .cert-summary {
+    background: #111;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+    color: #ddd;
+  }
+
   .name {
     position: absolute;
     top: 440px;
@@ -439,8 +504,25 @@ endif; ?>
       </div>
     </div>
   </div>
+  
+  <?php if ($is_summary): ?>
+  <div class="cert-summary">
+    <div class="section-label">Certificate Details</div>
+    <ul style="list-style:none;margin-top:12px;">
+      <li><strong>Status:</strong> <?php echo htmlspecialchars($cert['status'] ?? 'not active'); ?></li>
+      <li><strong>Issued:</strong> <?php echo htmlspecialchars($cert['date_issued'] ?: 'N/A'); ?></li>
+      <li><strong>Expiration:</strong> <?php echo htmlspecialchars($cert['expiration_date'] ?: 'N/A'); ?></li>
+      <li><strong>Type:</strong> <?php echo htmlspecialchars($cert['cert_type'] ?: 'N/A'); ?></li>
+      <li><strong>Event:</strong> <?php echo htmlspecialchars($cert['event'] ?: 'N/A'); ?></li>
+      <li><strong>Views:</strong> <?php echo (int)($cert['views'] ?? 0); ?></li>
+      <!-- <li><strong>Downloads:</strong> <?php echo (int)($cert['downloads'] ?? 0); ?></li> -->
+    </ul>
+   
+  </div>
+  <?php endif; ?>
 
   <!-- ── Certificate ───────────────────────────── -->
+  <?php if (!$is_summary): ?>
   <div class="cert-section">
     <div class="section-label">Certificate</div>
     <div class="cert-container">
@@ -459,9 +541,11 @@ endif; ?>
       </div>
     </div>
   </div>
+  <?php endif; ?>
+
 
   <!-- ── Download Button ───────────────────────── -->
-  <?php if (!isset($_GET['download']) || $_GET['download'] !== '1'): ?>
+  <?php if ((!isset($_GET['download']) || $_GET['download'] !== '1') && !$is_summary): ?>
   <div class="download-section">
     <button class="download-btn" id="downloadBtn" onclick="downloadPDF()">
       <i class="mdi mdi-download"></i> Download as PDF
@@ -545,7 +629,19 @@ function downloadPDF() {
   };
 
   html2pdf().set(opt).from(element).save()
-    .then(() => { if (downloadBtn) downloadBtn.classList.remove('download-btn-hidden'); })
+    .then(() => {
+      if (downloadBtn) downloadBtn.classList.remove('download-btn-hidden');
+
+      // Record download on server (unique per session)
+      try {
+        const certCode = '<?php echo addslashes($certificate_code); ?>';
+        fetch('/backend/backend.php?action=record_download&code=' + encodeURIComponent(certCode), { credentials: 'same-origin' })
+          .then(res => res.json())
+          .catch(err => console.warn('Record download failed', err));
+      } catch (e) {
+        console.warn('Record download error', e);
+      }
+    })
     .catch(err => {
       console.error('PDF Error:', err);
       if (downloadBtn) downloadBtn.classList.remove('download-btn-hidden');
