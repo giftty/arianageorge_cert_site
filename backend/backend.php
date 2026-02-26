@@ -19,6 +19,7 @@ try {
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS certificates (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        unique_number TEXT UNIQUE NOT NULL,
         cert_code TEXT UNIQUE NOT NULL,
         owner TEXT NOT NULL,
         cert_type TEXT,
@@ -173,7 +174,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // 1. Generate a temporary random certificate code to satisfy unique constraint
                 $temp_code = "TEMP_" . uniqid();
-
                 $stmt = $pdo->prepare("INSERT INTO certificates (cert_code, owner, cert_type, date_issued, expiration_date, event, generated_status) VALUES (:cert_code, :owner, :cert_type, :date_issued, :expiration_date, :event, 'not-generated')");
                 $stmt->execute([
                     ':cert_code' => $temp_code,
@@ -188,30 +188,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // 2. Define prefix mapping
                 $prefixes = [
-                    'Riggers Work at Height Safety' => 'AGISL/EHS/wah/0',
-                    'Basic CPR AED and First Aid' => 'AGISL/EHS/FA/0',
-                    'Electrical Safety' => 'AGISL/EHS/ES/0',
-                    'Fire Prevention and Fighting' => 'AGISL/EHS/FPF/0',
-                    'Risk Assessment' => 'AGISL/EHS/RA/0',
-                    'Confined Space Safety' => 'AGISL/EHS/CSS/0',
-                    'Mechanical Works Safety' => 'AGISL/EHS/MWS/0',
-                    'Hot Work Safety' => 'AGISL/EHS/HWS/0',
-                    'Civil Works Safety' => 'AGISL/EHS/CWS/0',
-                    'Rigging and Lifting' => 'AGISL/EHS/RLC/0',
-                    'Fall Arrest and Basic Rescue' => 'AGISL/EHS/EMF/RF/0',
-                    'Driving Safely_Defensive Driving' => 'AGISL/EHS/DDC/0'
+                    'Riggers Work at Height Safety' => 'AGISL/EHS/WAH/024/',
+                    'Basic CPR AED and First Aid' => 'AGISL/EHS/FA/003/',
+                    'Electrical Safety' => 'AGISL/EHS/ES/024/',
+                    'Fire Prevention and Fighting' => 'AGISL/EHS/FPF/020/',
+                    'Risk Assessment' => 'AGISL/EHS/RA/025/',
+                    'Confined Space Safety' => 'AGISL/EHS/CSS/030/',
+                    'Mechanical Works Safety' => 'AGISL/EHS/MWS/038/',
+                    'Hot Work Safety' => 'AGISL/EHS/HWS/050/',
+                    'Civil Works Safety' => 'AGISL/EHS/CWS/041/',
+                    'Rigging and Lifting' => 'AGISL/EHS/RLC/50/',
+                    'Fall Arrest and Basic Rescue' => 'AGISL/EHS/EMF/RF/027/',
+                    'Driving Safely_Defensive Driving' => 'AGISL/EHS/DDC/022'
                 ];
-
-                $base_prefix = $prefixes[$cert_type] ?? 'AGISL/EHS/GEN/0';
+                $stmt = $pdo->query("SELECT COUNT(*) FROM certificates");
+                $count = $stmt->fetchColumn();
+                $base_prefix = $prefixes[$cert_type] ;
                 $random_snippet = generateRandomSnippet();
 
                 // Format: Prefix/0.ID/RandomCode
-                $final_cert_code = $base_prefix . $cert_id . "/" . $random_snippet;
+                $final_cert_code = $base_prefix . (10000+$count);
 
                 // 3. Update the certificate with the final code
-                $updateStmt = $pdo->prepare("UPDATE certificates SET cert_code = :cert_code WHERE id = :id");
+                $updateStmt = $pdo->prepare("UPDATE certificates SET cert_code = :cert_code, unique_number = :unic_num WHERE id = :id");
                 $updateStmt->execute([
                     ':cert_code' => $final_cert_code,
+                    ':unic_num' => $random_snippet,
                     ':id' => $cert_id
                 ]);
 

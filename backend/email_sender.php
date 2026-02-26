@@ -2,22 +2,54 @@
 /**
  * SMTP Email Sender using PHP's built-in stream functions
  * Supports SMTP on port 465 with TLS/SSL
+ * 
+ * Credentials are loaded from environment variables or config file.
+ * DO NOT hardcode credentials in this file or git will track them!
  */
 
 class SMTPEmailSender {
-    private $host = 'mail.arianageorgegroups.com';
-    private $port = 465;
-    private $username = 'ariana_admin@arianageorgegroups.com';
-    private $password = '###arianaG';
-    private $encryption = 'ssl';
+    private $host;
+    private $port;
+    private $username;
+    private $password;
+    private $encryption;
     
     public function __construct() {
-        // Use environment or hardcoded credentials
-        $this->host = getenv('MAIL_HOST') ?: $this->host;
-        $this->port = (int)(getenv('MAIL_PORT') ?: $this->port);
-        $this->username = getenv('MAIL_USERNAME') ?: $this->username;
-        $this->password = getenv('MAIL_PASSWORD') ?: $this->password;
-        $this->encryption = getenv('MAIL_ENCRYPTION') ?: $this->encryption;
+        // Load configuration from environment variables or config file
+        $this->loadConfig();
+        
+        // Validate required settings
+        if (empty($this->username) || empty($this->password)) {
+            throw new Exception('SMTP credentials not configured. Please check environment variables or config.php');
+        }
+    }
+    
+    private function loadConfig() {
+        // Try environment variables first (highest priority)
+        $this->host = getenv('MAIL_HOST');
+        $this->port = getenv('MAIL_PORT');
+        $this->username = getenv('MAIL_USERNAME');
+        $this->password = getenv('MAIL_PASSWORD');
+        $this->encryption = getenv('MAIL_ENCRYPTION');
+        
+        // Fall back to config file if environment variables not set
+        if (empty($this->host) || empty($this->username)) {
+            $configPath = __DIR__ . '/config.php';
+            if (file_exists($configPath)) {
+                $config = require $configPath;
+                $mailConfig = $config['mail'] ?? [];
+                
+                $this->host = $this->host ?: ($mailConfig['host'] ?? '');
+                $this->port = $this->port ?: ($mailConfig['port'] ?? 465);
+                $this->username = $this->username ?: ($mailConfig['username'] ?? '');
+                $this->password = $this->password ?: ($mailConfig['password'] ?? '');
+                $this->encryption = $this->encryption ?: ($mailConfig['encryption'] ?? 'ssl');
+            }
+        }
+        
+        // Set defaults if still not set
+        $this->port = $this->port ?: 465;
+        $this->encryption = $this->encryption ?: 'ssl';
     }
 
     public function send($to, $subject, $body, $from_name = 'Ariana Groups') {
@@ -127,6 +159,7 @@ function send_email_fallback($to, $subject, $body, $from_name = 'Ariana Groups')
 
 // Public function to send email
 function send_email($to, $subject, $body, $from_name = 'Ariana Groups') {
+    echo $to;
     $sender = new SMTPEmailSender();
     $result = $sender->send($to, $subject, $body, $from_name);
     

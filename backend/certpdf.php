@@ -51,6 +51,7 @@ $issued = "---";
 $validity_period = "---";
 $certificate_code = "---";
 $expiration_date = "---";
+$unique_code = "----";
 $bg_image = "certificate-bg.jpg";
 $qr_code = "";
 $user_phone = null;
@@ -105,6 +106,7 @@ else {
             }
 
             $certificate_code = $cert['cert_code'];
+            $unique_code = $cert['unique_number'];
             $expiration_date = $cert['expiration_date'] ?: '2 years';
             $cert_type = strtolower($cert['cert_type'] ?? '');
 
@@ -123,7 +125,7 @@ else {
             $current_url = "$protocol://$host" . $_SERVER['PHP_SELF'];
             // QR should open a summary/details view rather than the full certificate
             $verification_link = "$current_url?code=" . encryptCode($certificate_code) . "&mode=summary";
-            $qr_code = "https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=" . urlencode($verification_link);
+            $qr_code = $verification_link;
 
             // Decide whether to show summary or full view:
             // - If explicit mode requested: 'summary' forces summary; 'full' allowed only for admin or owner session
@@ -373,44 +375,51 @@ endif; ?>
 
   .details {
     position: absolute;
-    bottom: 200px;
-    left: 150px;
+    /* bottom: 231px; */
+    left: 160px;
     font-size: 20px;
     color: #333;
     line-height: 1.6;
+    top: 768px;
   }
-
+  .unique_code{
+    position: absolute;
+    left: 90px;
+    font-size: 16px;
+    width: 1000px;
+    top: 5px;
+  }
   .cert-code-box {
     position: absolute;
-    bottom: 0.1px;
-    left: 100px;
-    font-size: 18px;
-    color: #555;
+    left: 120px;
+    font-size: 16px;
     width: 1000px;
+    top: -26px;
   }
 
   .validity-period {
     position: absolute;
-    bottom: 27px;
-    left: 70px;
+    bottom: 28px;
+    left: 80px;
     width: 1000px;
-    font-size: 18px;
+    font-size: 16px;
   }
 
   .issue-date {
     position: absolute;
-    bottom: 55px;
+    bottom: 57px;
     left: 40px;
     width: 1000px;
-    font-size: 18px;
+    font-size: 16px;
   }
 
   .expiration-date {
     position: absolute;
-    left: 50px;
+    left: 55px;
     width: 1000px;
-    font-size: 18px;
+    font-size: 16px;
     margin-top: 3px;
+    top: 37px;
   }
 
   .qr {
@@ -458,6 +467,14 @@ endif; ?>
     .profile-card { flex-direction: column; text-align: center; }
     .profile-meta { justify-content: center; }
     .profile-name { font-size: 1.5rem; }
+  }
+  #pdf417{
+    position: absolute;
+    top: 860px;
+    /* right: 0px; */
+    width: 180px;
+    height: 60px;
+    left: 415px;
   }
 </style>
 </head>
@@ -520,7 +537,6 @@ endif; ?>
    
   </div>
   <?php endif; ?>
-
   <!-- ── Certificate ───────────────────────────── -->
   <?php if (!$is_summary): ?>
   <div class="cert-section">
@@ -532,12 +548,17 @@ endif; ?>
           <div class="issue-date"><strong><?php echo $issued; ?></strong></div>
           <div class="validity-period"><strong><?php echo $validity_period; ?></strong></div>
           <div class="cert-code-box"><strong><?php echo $certificate_code; ?></strong></div>
+           <div class="unique_code"><strong><?php echo $unique_code; ?></strong></div>
           <div class="expiration-date"><strong><?php echo $expiration_date; ?></strong></div>
         </div>
-        <div class="qr" <?php if (!$qr_code): ?>style="display:none;"<?php
+        <!-- <div class="qr" <?php if (!$qr_code): ?>style="display:none;"<?php
     endif; ?>>
           <img src="<?php echo $qr_code; ?>">
-        </div>
+         
+        </div> -->
+        <div id="pdf417">
+           <?php include_once 'pdf417barcode.php'; ?>
+         </div>
       </div>
     </div>
   </div>
