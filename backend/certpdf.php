@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once('TCPDF-main/tcpdf.php');
 
 const ENC_KEY = 'AGISL_CERT_SECRET_KEY';
 const ENC_METHOD = 'AES-128-ECB';
@@ -109,8 +110,13 @@ else {
             $unique_code = $cert['unique_number'];
             $expiration_date = $cert['expiration_date'] ?: '2 years';
             $cert_type = strtolower($cert['cert_type'] ?? '');
-
-            $bg_image_path = "cert_images/" . $cert_type . ".png";
+            if(!file_exists($bg_image_path = "cert_images/" . $cert_type . ".jpg")){
+               $bg_image_path = "cert_images/" . $cert_type . ".png";
+               $image = imagecreatefrompng($bg_image_path);
+               imagejpeg($image, "cert_images/" . $cert_type . ".jpg", 100); // 100 = quality
+            }
+           
+            $bg_image_path = "cert_images/" . $cert_type . ".jpg";
             $bg_image_missing = false;
             if (file_exists(__DIR__ . '/' . $bg_image_path)) {
                 $bg_image = $bg_image_path;
@@ -126,7 +132,17 @@ else {
             // QR should open a summary/details view rather than the full certificate
             $verification_link = "$current_url?code=" . encryptCode($certificate_code) . "&mode=summary";
             $qr_code = $verification_link;
-
+            
+            $_SESSION['cert_data'] = [
+                  'name' => $name,
+                  'issued' => $issued,
+                  'validity_period' =>$validity_period,
+                  'certificate_code' => $certificate_code,
+                  'unique_code' => $unique_code,
+                  'qr_code' => $qr_code, 
+                  'expiration_date' => $expiration_date,
+                  'bg_image' => $bg_image
+              ];
             // Decide whether to show summary or full view:
             // - If explicit mode requested: 'summary' forces summary; 'full' allowed only for admin or owner session
             // - If no explicit mode: default to full for admin or owner (session view_cert_code), otherwise summary
@@ -170,6 +186,7 @@ else {
 
             // If this request requested a download, increment downloads counter once per session per certificate
             if (isset($_GET['download']) && $_GET['download'] === '1') {
+
               if (empty($_SESSION['downloaded_certs'][$cert_code])) {
                 try {
                   $dlStmt = $pdo->prepare("UPDATE certificates SET downloads = COALESCE(downloads,0) + 1 WHERE cert_code = :code");
@@ -192,6 +209,125 @@ else {
 $profile_img_src = '/admin/assets/images/faces-clipart/pic-4.png'; // default
 if ($user_profile_image && file_exists(dirname(__DIR__) . '/' . ltrim($user_profile_image, '/'))) {
     $profile_img_src = '/' . ltrim($user_profile_image, '/');
+}
+
+if(isset($_GET['dw']) ){
+  generateCertificate(false);
+} 
+function generateCertificate($download = true) {
+
+    $data = $_SESSION['cert_data'];
+    $name = $data['name'];
+    $issued = $data['issued'];
+    $validity_period = $data['validity_period'];
+    $certificate_code = $data['certificate_code'];
+    $unique_code = $data['unique_code'];
+    $qr_code = $data['qr_code']; // Optional
+    $expiration_date = $data['expiration_date'];
+    $bg_image = $data['bg_image'];
+    // Create PDF (A4 Landscape)
+    $pdf = new TCPDF('L', 'mm', 'A4', true, 'UTF-8', false);
+
+    // Remove header/footer
+    $pdf->setPrintHeader(false);
+    $pdf->setPrintFooter(false);
+
+    // Remove margins and auto page breaks
+    $pdf->SetMargins(0, 0, 0);
+    $pdf->SetAutoPageBreak(false, 0);
+
+    $pdf->AddPage();
+
+    // Check background image exists
+    if (!file_exists($bg_image)) {
+        die('Background image not found: ' . $bg_image);
+    }
+
+    // Render background full page
+    $pdf->Image(
+        $bg_image,
+        0,      // X
+        0,      // Y
+        297,    // Width (A4 landscape)
+        210,    // Height
+        'JPG',
+        '',
+        '',
+        false,
+        300,
+        '',
+        false,
+        false,
+        0
+    );
+
+    // =======================
+    // Place name (centered)
+    // =======================
+    $pdf->SetFont('helvetica', 'B', 28);
+    $pdf->SetTextColor(0, 0, 0);
+    $pdf->SetXY(0, 92); // Adjust Y as needed
+    $pdf->Cell(297, 0, strtoupper($name), 0, 1, 'C');
+
+    // =======================
+    // Issue date
+    // =======================
+    $pdf->SetFont('helvetica', 'B', 10);
+    $pdf->SetXY(40, 143.7);
+    $pdf->Cell(0, 0, $issued, 0, 1);
+
+    // Validity period
+    $pdf->SetXY(48, 149.8);
+    $pdf->Cell(0, 0, $validity_period, 0, 1);
+
+    // Certificate code
+    $pdf->SetXY(57, 156);
+    $pdf->Cell(0, 0, $certificate_code, 0, 1);
+
+    // Unique code
+    $pdf->SetXY(51, 162.6);
+    $pdf->Cell(0, 0, $unique_code, 0, 1);
+
+    // Expiration date
+    $pdf->SetXY(45, 170);
+    $pdf->Cell(0, 0, $expiration_date, 0, 1);
+
+    // =======================
+    // PDF417 barcode
+    // =======================
+    $style = [
+        'border' => false,
+        'padding' => 0,
+        'fgcolor' => [0,0,0],
+        'bgcolor' => false
+    ];
+    $pdf->write2DBarcode(
+        $qr_code,
+        'PDF417',
+        82,  // X
+        175,
+        50,
+        17,
+        $style,
+        'M',
+        true
+    );
+    $pdf->SetXY(93, 192);
+    $pdf->Cell(0, 0, 'VERIFY HERE', 0, 1);
+    // =======================
+    // Output PDF
+    // =======================
+    $filename = 'Certificate_for '.$name.' code'.$certificate_code.'.pdf';
+
+    if ($download) {
+        // Force download
+        $pdf->Output($filename, 'D');
+    } else {
+        // Display inline
+        $pdf->Output($filename, 'I');
+    }
+
+    exit;
 }
 ?>
 <!DOCTYPE html>
@@ -568,9 +704,12 @@ endif; ?>
   <!-- ── Download Button ───────────────────────── -->
   <?php if ((!isset($_GET['download']) || $_GET['download'] !== '1') && !$is_summary): ?>
   <div class="download-section">
-    <button class="download-btn" id="downloadBtn" onclick="downloadPDF()">
+    <a href="certpdf.php?dw=t">
+      <button class="download-btn" id="downloadBtn" >
       <i class="mdi mdi-download"></i> Download as PDF
     </button>
+    </a>
+    
   </div>
   <?php
     endif; ?>
