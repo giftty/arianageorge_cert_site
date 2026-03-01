@@ -212,7 +212,7 @@ if ($user_profile_image && file_exists(dirname(__DIR__) . '/' . ltrim($user_prof
 }
 
 if(isset($_GET['dw']) ){
-  generateCertificate(false);
+  generateCertificate();
 } 
 function generateCertificate($download = true) {
 
@@ -317,7 +317,10 @@ function generateCertificate($download = true) {
     // =======================
     // Output PDF
     // =======================
-    $filename = 'Certificate_for '.$name.' code'.$certificate_code.'.pdf';
+    $safe_code = str_replace('/', '-', $certificate_code);
+    $safe_name = preg_replace('/[^A-Za-z0-9_\- ]/', '', $name);
+
+    $filename = 'Certificate_for_'.$safe_name.'_code_'.$safe_code.'.pdf';
 
     if ($download) {
         // Force download
