@@ -90,7 +90,7 @@
             <a class="navbar-brand brand-logo-mini" href="/admin/index.html"><img
                 src="/admin/assets/images/logo-mini.svg" alt="logo" /></a>
           </div>
-      
+
           <ul class="navbar-nav navbar-nav-right">
             <li class="nav-item nav-profile dropdown d-none d-md-block me-3">
               <a class="nav-link dropdown-toggle" id="adminProfileDropdown" href="#" data-bs-toggle="dropdown"
@@ -212,7 +212,7 @@
               <script>document.write(new Date().getFullYear());</script>. All Rights Reserved. &mdash; <a
                 href="#">arianageorgegroup</a>
             </span>
-           
+
           </div>
         </footer>
         <!-- partial -->
@@ -589,12 +589,7 @@
     }
 
     function editCert(code) {
-      Swal.fire({
-        title: 'Info',
-        text: 'Edit certificate: ' + code + ' (Implementation pending)',
-        icon: 'info',
-        confirmButtonColor: '#007bff'
-      });
+      window.location.href = '/admin/edit-certificate.html?code=' + encodeURIComponent(code);
     }
 
     function deleteCert(code) {

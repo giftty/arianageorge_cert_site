@@ -255,6 +255,16 @@ $cert_code = isset($_GET['code']) ? $_GET['code'] : '';
                 </div>
               </div>
 
+              <div class="form-group mb-20">
+                <div class="custom-control custom-checkbox text-center mt-3">
+                  <input type="checkbox" class="custom-control-input" id="data_use_policy" name="data_use_policy" required>
+                  <label class="custom-control-label" for="data_use_policy" style="font-size: 0.9rem;">
+                    I accept the <a href="#" target="_blank" style="color: var(--primary-color);">Data Use Acceptance Policy</a> and agree that my data can be sent to third parties.
+                  </label>
+                  <div class="invalid-feedback">You must accept the data use policy to register.</div>
+                </div>
+              </div>
+
               <div class="text-center mt-4">
                 <button type="submit" class="btn btn-primary btn-block w-100 py-3" id="submitBtn">
                   Submit Registration
@@ -369,6 +379,12 @@ $cert_code = isset($_GET['code']) ? $_GET['code'] : '';
       }
       if (profileImage.files.length === 0) {
         document.getElementById('profileImageWrapper').classList.add('is-invalid');
+        isValid = false;
+      }
+      
+      const dataUsePolicy = document.getElementById('data_use_policy');
+      if (!dataUsePolicy.checked) {
+        dataUsePolicy.classList.add('is-invalid');
         isValid = false;
       }
 

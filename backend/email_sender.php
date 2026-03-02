@@ -1,12 +1,11 @@
 <?php
-/**
- * SMTP Email Sender using PHP's built-in stream functions
- * Supports SMTP on port 465 with TLS/SSL
- * 
- * Credentials are loaded from environment variables or config file.
- * DO NOT hardcode credentials in this file or git will track them!
- */
 
+    require 'PHPMailer-master/src/Exception.php';
+    require 'PHPMailer-master/src/PHPMailer.php';
+    require 'PHPMailer-master/src/SMTP.php';
+
+    use PHPMailer\PHPMailer\PHPMailer;
+    use PHPMailer\PHPMailer\Exception;
 class SMTPEmailSender {
     private $host;
     private $port;
@@ -53,98 +52,36 @@ class SMTPEmailSender {
     }
 
     public function send($to, $subject, $body, $from_name = 'Ariana Groups') {
-        try {
-            // Build SMTP stream context for SSL/TLS
-            $context = stream_context_create([
-                'ssl' => [
-                    'verify_peer' => false,
-                    'verify_peer_name' => false,
-                    'allow_self_signed' => true
-                ]
-            ]);
 
-            // Connect to SMTP server
-            $transport = "ssl://{$this->host}:{$this->port}";
-            $fp = stream_socket_client($transport, $errno, $errstr, 30, STREAM_CLIENT_CONNECT, $context);
-            
-            if (!$fp) {
-                throw new Exception("Could not connect to SMTP server: $errstr ($errno)");
-            }
+                $mail = new PHPMailer(true);
+                try {
+                    // SMTP Settings
+                    $mail->isSMTP();
+                    $mail->Host       = $this->host;
+                    $mail->SMTPAuth   = true;
+                    $mail->Username   = $this->username;
+                    $mail->Password   = $this->password; // put real password
+                    $mail->SMTPSecure = $this->encryption; // Port 465 uses SSL
+                    $mail->Port       = $this->port;
 
-            // Wait for the server greeting
-            $response = fgets($fp, 1024);
-            if (strpos($response, '220') === false) {
-                throw new Exception("SMTP server greeting failed: $response");
-            }
+                    // Sender
+                    $mail->setFrom($this->username, 'Ariana Admin');
 
-            // Send EHLO command
-            fwrite($fp, "EHLO example.com\r\n");
-            $response = fgets($fp, 1024);
+                    // Recipient
+                    $mail->addAddress($to, '');
 
-            // Authenticate
-            fwrite($fp, "AUTH LOGIN\r\n");
-            $response = fgets($fp, 1024);
-            if (strpos($response, '334') === false) {
-                throw new Exception("AUTH LOGIN failed");
-            }
+                    // Email Content
+                    $mail->isHTML(true);
+                    $mail->Subject = $subject;
+                    $mail->Body    = $body;
+                    $mail->AltBody = '';
 
-            fwrite($fp, base64_encode($this->username) . "\r\n");
-            $response = fgets($fp, 1024);
-            if (strpos($response, '334') === false) {
-                throw new Exception("Username auth failed");
-            }
+                    $mail->send();
+                   return  true;
 
-            fwrite($fp, base64_encode($this->password) . "\r\n");
-            $response = fgets($fp, 1024);
-            if (strpos($response, '235') === false) {
-                throw new Exception("Password auth failed: $response");
-            }
-
-            // Set sender
-            fwrite($fp, "MAIL FROM:<{$this->username}>\r\n");
-            $response = fgets($fp, 1024);
-            if (strpos($response, '250') === false) {
-                throw new Exception("MAIL FROM failed: $response");
-            }
-
-            // Set recipient
-            fwrite($fp, "RCPT TO:<$to>\r\n");
-            $response = fgets($fp, 1024);
-            if (strpos($response, '250') === false) {
-                throw new Exception("RCPT TO failed: $response");
-            }
-
-            // Prepare message
-            fwrite($fp, "DATA\r\n");
-            $response = fgets($fp, 1024);
-            if (strpos($response, '354') === false) {
-                throw new Exception("DATA command failed: $response");
-            }
-
-            $email_content = "From: {$from_name} <{$this->username}>\r\n";
-            $email_content .= "To: $to\r\n";
-            $email_content .= "Subject: $subject\r\n";
-            $email_content .= "MIME-Version: 1.0\r\n";
-            $email_content .= "Content-Type: text/html; charset=UTF-8\r\n";
-            $email_content .= "Content-Transfer-Encoding: 8bit\r\n\r\n";
-            $email_content .= $body . "\r\n";
-            $email_content .= ".\r\n";
-
-            fwrite($fp, $email_content);
-            $response = fgets($fp, 1024);
-            if (strpos($response, '250') === false) {
-                throw new Exception("Message send failed: $response");
-            }
-
-            // Quit
-            fwrite($fp, "QUIT\r\n");
-            fclose($fp);
-
-            return ['success' => true];
-        } catch (Exception $e) {
-            error_log("SMTP Error: " . $e->getMessage());
-            return ['success' => false, 'error' => $e->getMessage()];
-        }
+                } catch (Exception $e) {
+                    echo "Mailer Error: " . $mail->ErrorInfo;
+                }
     }
 }
 
@@ -159,15 +96,14 @@ function send_email_fallback($to, $subject, $body, $from_name = 'Ariana Groups')
 
 // Public function to send email
 function send_email($to, $subject, $body, $from_name = 'Ariana Groups') {
-    echo $to;
     $sender = new SMTPEmailSender();
     $result = $sender->send($to, $subject, $body, $from_name);
-    
-    if (!$result['success']) {
+    if (!$result) {
         // Fallback to mail()
-        error_log("Falling back to mail() function");
-        return send_email_fallback($to, $subject, $body, $from_name);
+        error_log("An error occured while trying to send mail.");
+        return false;
+        // return send_email_fallback($to, $subject, $body, $from_name);
     }
     return true;
 }
-?>
+

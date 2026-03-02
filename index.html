@@ -507,7 +507,10 @@
               <label class="text-black" for="email">Email address</label>
               <input type="email" class="form-control" id="email">
             </div>
-
+              <div class="form-group">
+              <label class="text-black" for="subject">Subject</label>
+              <input type="text" class="form-control" id="subject">
+            </div>
             <div class="form-group">
               <label class="text-black" for="message">Message</label>
               <textarea name="" class="form-control" id="message" cols="30" rows="5"></textarea>
@@ -592,7 +595,7 @@
         const name = (fname + ' ' + lname).trim() || 'Unknown';
         const email = document.getElementById('email').value.trim();
         const message = document.getElementById('message').value.trim();
-        
+        const subject = document.getElementById('subject').value.trim();
         if (!email || !message) {
           Swal.fire('Error','Please provide your email and message.','error');
           return;
@@ -605,10 +608,12 @@
         fetch('/backend/backend.php?action=save_message', {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: `name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}&subject=&message=${encodeURIComponent(message)}`
+          body: `name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}&subject=${encodeURIComponent(subject)}&message=${encodeURIComponent(message)}`
         }).then(r => r.json()).then(data => {
           btn.disabled = false;
           btn.innerHTML = origText;
+           console.log('==============')
+           console.log(data)       
           if (data.status === 'success') {
             Swal.fire({ 
               icon: 'success', 
@@ -625,6 +630,8 @@
         }).catch(err => {
           btn.disabled = false;
           btn.innerHTML = origText;
+          console.log(err)
+          console.log('==============')
           Swal.fire('Error', 'Network error. Please try again.', 'error');
         });
       });

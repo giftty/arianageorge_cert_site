@@ -7,13 +7,13 @@ const ENC_METHOD = 'AES-128-ECB';
 
 function encryptCode($code)
 {
-    return urlencode(base64_encode(openssl_encrypt($code, ENC_METHOD, ENC_KEY)));
+  return urlencode(base64_encode(openssl_encrypt($code, ENC_METHOD, ENC_KEY)));
 }
 
 function decryptCode($encrypted)
 {
-    $decoded = openssl_decrypt(base64_decode(urldecode($encrypted)), ENC_METHOD, ENC_KEY);
-    return $decoded !== false ? $decoded : $encrypted;
+  $decoded = openssl_decrypt(base64_decode(urldecode($encrypted)), ENC_METHOD, ENC_KEY);
+  return $decoded !== false ? $decoded : $encrypted;
 }
 
 // Prioritize GET parameter over Session
@@ -21,24 +21,24 @@ $cert_code = null;
 
 // Check for session expiration (40 minutes)
 if (isset($_SESSION['view_cert_timestamp']) && (time() - $_SESSION['view_cert_timestamp'] > 40 * 60)) {
-    unset($_SESSION['view_cert_code']);
-    unset($_SESSION['view_cert_timestamp']);
+  unset($_SESSION['view_cert_code']);
+  unset($_SESSION['view_cert_timestamp']);
 }
 
 if (isset($_GET['code'])) {
-    // Came via encrypted URL (e.g., from QR code or redirect after registration)
-    $cert_code = decryptCode($_GET['code']);
-    // Refresh session timestamp on valid URL access
-    if ($cert_code) {
-        $_SESSION['view_cert_code'] = $cert_code;
-        $_SESSION['view_cert_timestamp'] = time();
-    }
+  // Came via encrypted URL (e.g., from QR code or redirect after registration)
+  $cert_code = decryptCode($_GET['code']);
+  // Refresh session timestamp on valid URL access
+  if ($cert_code) {
+    $_SESSION['view_cert_code'] = $cert_code;
+    $_SESSION['view_cert_timestamp'] = time();
+  }
 }
 else {
-    // Direct access without a code — always clear session and prompt
-    unset($_SESSION['view_cert_code']);
-    unset($_SESSION['view_cert_timestamp']);
-    $cert_code = null;
+  // Direct access without a code — always clear session and prompt
+  unset($_SESSION['view_cert_code']);
+  unset($_SESSION['view_cert_timestamp']);
+  $cert_code = null;
 }
 
 $dbFile = __DIR__ . '/data.db';
@@ -61,276 +61,336 @@ $user_profile_image = null;
 $cert_type = '';
 
 if (!$cert_code) {
-    $show_prompt = true;
+  $show_prompt = true;
 }
 else {
-    try {
-        $pdo = new PDO("sqlite:" . $dbFile);
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+  try {
+    $pdo = new PDO("sqlite:" . $dbFile);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-        // Fetch certificate
-        $stmt = $pdo->prepare("SELECT * FROM certificates WHERE cert_code = :code");
-        $stmt->execute([':code' => $cert_code]);
-        $cert = $stmt->fetch(PDO::FETCH_ASSOC);
+    // Fetch certificate
+    $stmt = $pdo->prepare("SELECT * FROM certificates WHERE cert_code = :code");
+    $stmt->execute([':code' => $cert_code]);
+    $cert = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if (!$cert) {
-            $show_prompt = true;
-            $error_message = "Certificate not found.";
+    if (!$cert) {
+      $show_prompt = true;
+      $error_message = "Certificate not found.";
+    }
+    else {
+      // Fetch user linked to this cert
+      $stmt = $pdo->prepare("SELECT * FROM users WHERE cert_code = :code");
+      $stmt->execute([':code' => $cert_code]);
+      $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+      $name = $user ? ($user['firstname'] . ' ' . $user['lastname']) : $cert['owner'];
+      $user_phone = $user['phone'] ?? null;
+      $user_address = $user['address'] ?? null;
+      $user_profile_image = $user['profile_image'] ?? null;
+
+      $issued = $cert['date_issued'] ?: 'N/A';
+
+      $validity_period = '2 years';
+      if ($cert['date_issued'] && $cert['expiration_date']) {
+        $date1 = new DateTime($cert['date_issued']);
+        $date2 = new DateTime($cert['expiration_date']);
+        $interval = $date1->diff($date2);
+        $parts = [];
+        if ($interval->y > 0)
+          $parts[] = $interval->y . ($interval->y > 1 ? ' Years' : ' Year');
+        if ($interval->m > 0)
+          $parts[] = $interval->m . ($interval->m > 1 ? ' Months' : ' Month');
+        if ($interval->d > 0)
+          $parts[] = $interval->d . ($interval->d > 1 ? ' Days' : ' Day');
+        if (!empty($parts))
+          $validity_period = implode(', ', $parts);
+      }
+
+      $certificate_code = $cert['cert_code'];
+      $unique_code = $cert['unique_number'];
+      $expiration_date = $cert['expiration_date'] ?: '2 years';
+      $cert_type = strtolower($cert['cert_type'] ?? '');
+      if (!file_exists($bg_image_path = "cert_images/" . $cert_type . ".jpg")) {
+        $bg_image_path = "cert_images/" . $cert_type . ".png";
+        $image = imagecreatefrompng($bg_image_path);
+        imagejpeg($image, "cert_images/" . $cert_type . ".jpg", 100); // 100 = quality
+      }
+
+      $bg_image_path = "cert_images/" . $cert_type . ".jpg";
+      $bg_image_missing = false;
+      if (file_exists(__DIR__ . '/' . $bg_image_path)) {
+        $bg_image = $bg_image_path;
+      }
+      else {
+        $bg_image = "certificate-bg.jpg";
+        $bg_image_missing = true;
+      }
+
+      $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
+      $host = $_SERVER['HTTP_HOST'];
+      $current_url = "$protocol://$host" . $_SERVER['PHP_SELF'];
+      // QR should open a summary/details view rather than the full certificate
+      $verification_link = "$current_url?code=" . encryptCode($certificate_code) . "&mode=summary";
+      $qr_code = $verification_link;
+
+      $_SESSION['cert_data'] = [
+        'name' => $name,
+        'issued' => $issued,
+        'validity_period' => $validity_period,
+        'certificate_code' => $certificate_code,
+        'unique_code' => $unique_code,
+        'qr_code' => $qr_code,
+        'expiration_date' => $expiration_date,
+        'bg_image' => $bg_image
+      ];
+      // Decide whether to show summary or full view:
+      // - If explicit mode requested: 'summary' forces summary; 'full' allowed only for admin or owner session
+      // - If no explicit mode: default to full for admin or owner (session view_cert_code), otherwise summary
+      $is_summary = true; // safe default
+      if ($requested_mode === 'summary') {
+        $is_summary = true;
+      }
+      elseif ($requested_mode === 'full') {
+        // allow only admin or owner who has the cert code in session
+        if (isset($_SESSION['admin_id']) || (isset($_SESSION['view_cert_code']) && $_SESSION['view_cert_code'] === $certificate_code)) {
+          $is_summary = false;
         }
         else {
-            // Fetch user linked to this cert
-            $stmt = $pdo->prepare("SELECT * FROM users WHERE cert_code = :code");
-            $stmt->execute([':code' => $cert_code]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            $name = $user ? ($user['firstname'] . ' ' . $user['lastname']) : $cert['owner'];
-            $user_phone = $user['phone'] ?? null;
-            $user_address = $user['address'] ?? null;
-            $user_profile_image = $user['profile_image'] ?? null;
-
-            $issued = $cert['date_issued'] ?: 'N/A';
-
-            $validity_period = '2 years';
-            if ($cert['date_issued'] && $cert['expiration_date']) {
-                $date1 = new DateTime($cert['date_issued']);
-                $date2 = new DateTime($cert['expiration_date']);
-                $interval = $date1->diff($date2);
-                $parts = [];
-                if ($interval->y > 0)
-                    $parts[] = $interval->y . ($interval->y > 1 ? ' Years' : ' Year');
-                if ($interval->m > 0)
-                    $parts[] = $interval->m . ($interval->m > 1 ? ' Months' : ' Month');
-                if ($interval->d > 0)
-                    $parts[] = $interval->d . ($interval->d > 1 ? ' Days' : ' Day');
-                if (!empty($parts))
-                    $validity_period = implode(', ', $parts);
-            }
-
-            $certificate_code = $cert['cert_code'];
-            $unique_code = $cert['unique_number'];
-            $expiration_date = $cert['expiration_date'] ?: '2 years';
-            $cert_type = strtolower($cert['cert_type'] ?? '');
-            if(!file_exists($bg_image_path = "cert_images/" . $cert_type . ".jpg")){
-               $bg_image_path = "cert_images/" . $cert_type . ".png";
-               $image = imagecreatefrompng($bg_image_path);
-               imagejpeg($image, "cert_images/" . $cert_type . ".jpg", 100); // 100 = quality
-            }
-           
-            $bg_image_path = "cert_images/" . $cert_type . ".jpg";
-            $bg_image_missing = false;
-            if (file_exists(__DIR__ . '/' . $bg_image_path)) {
-                $bg_image = $bg_image_path;
-            }
-            else {
-                $bg_image = "certificate-bg.jpg";
-                $bg_image_missing = true;
-            }
-
-            $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
-            $host = $_SERVER['HTTP_HOST'];
-            $current_url = "$protocol://$host" . $_SERVER['PHP_SELF'];
-            // QR should open a summary/details view rather than the full certificate
-            $verification_link = "$current_url?code=" . encryptCode($certificate_code) . "&mode=summary";
-            $qr_code = $verification_link;
-            
-            $_SESSION['cert_data'] = [
-                  'name' => $name,
-                  'issued' => $issued,
-                  'validity_period' =>$validity_period,
-                  'certificate_code' => $certificate_code,
-                  'unique_code' => $unique_code,
-                  'qr_code' => $qr_code, 
-                  'expiration_date' => $expiration_date,
-                  'bg_image' => $bg_image
-              ];
-            // Decide whether to show summary or full view:
-            // - If explicit mode requested: 'summary' forces summary; 'full' allowed only for admin or owner session
-            // - If no explicit mode: default to full for admin or owner (session view_cert_code), otherwise summary
-            $is_summary = true; // safe default
-            if ($requested_mode === 'summary') {
-              $is_summary = true;
-            } elseif ($requested_mode === 'full') {
-              // allow only admin or owner who has the cert code in session
-              if (isset($_SESSION['admin_id']) || (isset($_SESSION['view_cert_code']) && $_SESSION['view_cert_code'] === $certificate_code)) {
-                $is_summary = false;
-              } else {
-                $is_summary = true; // force summary if not allowed
-              }
-            } else {
-              // no explicit mode: admin or owner sees full, others see summary
-              if (isset($_SESSION['admin_id']) || (isset($_SESSION['view_cert_code']) && $_SESSION['view_cert_code'] === $certificate_code)) {
-                $is_summary = false;
-              } else {
-                $is_summary = true;
-              }
-            }
-
-            // Track viewed/downloaded certificates per session to avoid duplicate counts
-            if (!isset($_SESSION['viewed_certs']) || !is_array($_SESSION['viewed_certs'])) {
-              $_SESSION['viewed_certs'] = [];
-            }
-            if (!isset($_SESSION['downloaded_certs']) || !is_array($_SESSION['downloaded_certs'])) {
-              $_SESSION['downloaded_certs'] = [];
-            }
-
-            // Increment view count only once per session per certificate
-            if (empty($_SESSION['viewed_certs'][$cert_code])) {
-              try {
-                $incStmt = $pdo->prepare("UPDATE certificates SET views = COALESCE(views,0) + 1 WHERE cert_code = :code");
-                $incStmt->execute([':code' => $cert_code]);
-                $_SESSION['viewed_certs'][$cert_code] = time();
-              } catch (PDOException $e) {
-                // non-fatal; continue rendering
-              }
-            }
-
-            // If this request requested a download, increment downloads counter once per session per certificate
-            if (isset($_GET['download']) && $_GET['download'] === '1') {
-
-              if (empty($_SESSION['downloaded_certs'][$cert_code])) {
-                try {
-                  $dlStmt = $pdo->prepare("UPDATE certificates SET downloads = COALESCE(downloads,0) + 1 WHERE cert_code = :code");
-                  $dlStmt->execute([':code' => $cert_code]);
-                  $_SESSION['downloaded_certs'][$cert_code] = time();
-                } catch (PDOException $e) {
-                  // non-fatal
-                }
-              }
-            }
+          $is_summary = true; // force summary if not allowed
         }
+      }
+      else {
+        // no explicit mode: admin or owner sees full, others see summary
+        if (isset($_SESSION['admin_id']) || (isset($_SESSION['view_cert_code']) && $_SESSION['view_cert_code'] === $certificate_code)) {
+          $is_summary = false;
+        }
+        else {
+          $is_summary = true;
+        }
+      }
+
+      // Track viewed/downloaded certificates per session to avoid duplicate counts
+      if (!isset($_SESSION['viewed_certs']) || !is_array($_SESSION['viewed_certs'])) {
+        $_SESSION['viewed_certs'] = [];
+      }
+      if (!isset($_SESSION['downloaded_certs']) || !is_array($_SESSION['downloaded_certs'])) {
+        $_SESSION['downloaded_certs'] = [];
+      }
+
+      // Increment view count only once per session per certificate
+      if (empty($_SESSION['viewed_certs'][$cert_code])) {
+        try {
+          $incStmt = $pdo->prepare("UPDATE certificates SET views = COALESCE(views,0) + 1 WHERE cert_code = :code");
+          $incStmt->execute([':code' => $cert_code]);
+          $_SESSION['viewed_certs'][$cert_code] = time();
+        }
+        catch (PDOException $e) {
+        // non-fatal; continue rendering
+        }
+      }
+
+      // If this request requested a download, increment downloads counter once per session per certificate
+      if (isset($_GET['download']) && $_GET['download'] === '1') {
+
+        if (empty($_SESSION['downloaded_certs'][$cert_code])) {
+          try {
+            $dlStmt = $pdo->prepare("UPDATE certificates SET downloads = COALESCE(downloads,0) + 1 WHERE cert_code = :code");
+            $dlStmt->execute([':code' => $cert_code]);
+            $_SESSION['downloaded_certs'][$cert_code] = time();
+          }
+          catch (PDOException $e) {
+          // non-fatal
+          }
+        }
+      }
     }
-    catch (PDOException $e) {
-        $error_message = "Database error: " . $e->getMessage();
-        $show_prompt = true;
-    }
+  }
+  catch (PDOException $e) {
+    $error_message = "Database error: " . $e->getMessage();
+    $show_prompt = true;
+  }
 }
 
 // Resolve profile image URL
 $profile_img_src = '/admin/assets/images/faces-clipart/pic-4.png'; // default
 if ($user_profile_image && file_exists(dirname(__DIR__) . '/' . ltrim($user_profile_image, '/'))) {
-    $profile_img_src = '/' . ltrim($user_profile_image, '/');
+  $profile_img_src = '/' . ltrim($user_profile_image, '/');
 }
 
-if(isset($_GET['dw']) ){
+if (isset($_GET['dw'])) {
   generateCertificate();
-} 
-function generateCertificate($download = true) {
+}
 
-    $data = $_SESSION['cert_data'];
-    $name = $data['name'];
-    $issued = $data['issued'];
-    $validity_period = $data['validity_period'];
-    $certificate_code = $data['certificate_code'];
-    $unique_code = $data['unique_code'];
-    $qr_code = $data['qr_code']; // Optional
-    $expiration_date = $data['expiration_date'];
-    $bg_image = $data['bg_image'];
-    // Create PDF (A4 Landscape)
-    $pdf = new TCPDF('L', 'mm', 'A4', true, 'UTF-8', false);
+function generateCertificate($download = true)
+{
 
-    // Remove header/footer
-    $pdf->setPrintHeader(false);
-    $pdf->setPrintFooter(false);
+  $data = $_SESSION['cert_data'];
+  $name = $data['name'];
+  $issued = $data['issued'];
+  $validity_period = $data['validity_period'];
+  $certificate_code = $data['certificate_code'];
+  $unique_code = $data['unique_code'];
+  $qr_code = $data['qr_code']; // Optional
+  $expiration_date = $data['expiration_date'];
+  $bg_image = $data['bg_image'];
+  // Create PDF (A4 Landscape)
+  $pdf = new TCPDF('L', 'mm', 'A4', true, 'UTF-8', false);
 
-    // Remove margins and auto page breaks
-    $pdf->SetMargins(0, 0, 0);
-    $pdf->SetAutoPageBreak(false, 0);
+  // Remove header/footer
+  $pdf->setPrintHeader(false);
+  $pdf->setPrintFooter(false);
 
-    $pdf->AddPage();
+  // Remove margins and auto page breaks
+  $pdf->SetMargins(0, 0, 0);
+  $pdf->SetAutoPageBreak(false, 0);
 
-    // Check background image exists
-    if (!file_exists($bg_image)) {
-        die('Background image not found: ' . $bg_image);
-    }
+  $pdf->AddPage();
 
-    // Render background full page
-    $pdf->Image(
-        $bg_image,
-        0,      // X
-        0,      // Y
-        297,    // Width (A4 landscape)
-        210,    // Height
-        'JPG',
-        '',
-        '',
-        false,
-        300,
-        '',
-        false,
-        false,
-        0
-    );
+  // Check background image exists
+  if (!file_exists($bg_image)) {
+    die('Background image not found: ' . $bg_image);
+  }
 
-    // =======================
-    // Place name (centered)
-    // =======================
-    $pdf->SetFont('helvetica', 'B', 28);
-    $pdf->SetTextColor(0, 0, 0);
-    $pdf->SetXY(0, 92); // Adjust Y as needed
-    $pdf->Cell(297, 0, strtoupper($name), 0, 1, 'C');
+  // Render background full page
+  $pdf->Image(
+    $bg_image,
+    0, // X
+    0, // Y
+    297, // Width (A4 landscape)
+    210, // Height
+    'JPG',
+    '',
+    '',
+    false,
+    300,
+    '',
+    false,
+    false,
+    0
+  );
 
-    // =======================
-    // Issue date
-    // =======================
-    $pdf->SetFont('helvetica', 'B', 10);
-    $pdf->SetXY(40, 143.7);
-    $pdf->Cell(0, 0, $issued, 0, 1);
+  // =======================
+  // Place name (centered)
+  // =======================
+  $pdf->SetFont('helvetica', 'B', 28);
+  $pdf->SetTextColor(0, 0, 0);
+  $pdf->SetXY(0, 92); // Adjust Y as needed
+  $pdf->Cell(297, 0, strtoupper($name), 0, 1, 'C');
 
-    // Validity period
-    $pdf->SetXY(48, 149.8);
-    $pdf->Cell(0, 0, $validity_period, 0, 1);
+  // =======================
+  // Bottom Left Details
+  // =======================
+  // Prepare values
+  $issueDateText = "Issue Date : " . $issued;
+  $validityText = "Validity Period : " . $validity_period;
+  $certNumberText = "Certificate Number : " . $certificate_code;
+  $uniqueIdText = "Unique number : " . $unique_code;
+  $expiryDateText = "Expiry Date : " . $expiration_date;
 
-    // Certificate code
-    $pdf->SetXY(57, 156);
-    $pdf->Cell(0, 0, $certificate_code, 0, 1);
+  // Draw White Background
+  // $startX = 14;
+  // $startY = 133;
+  // $rectWidth = 120;
+  // $rectHeight = 42;
+  // $pdf->SetFillColor(255, 255, 255);
+  // $pdf->Rect($startX, $startY, $rectWidth, $rectHeight, 'F');
 
-    // Unique code
-    $pdf->SetXY(51, 162.6);
-    $pdf->Cell(0, 0, $unique_code, 0, 1);
+  // Output formatting
+  $pdf->SetTextColor(70, 50, 110); // A dark purplish color to match the image
+  $startX = 14; // Adjust left margin
+  $startY = 151; // Adjust starting Y position
 
-    // Expiration date
-    $pdf->SetXY(45, 170);
-    $pdf->Cell(0, 0, $expiration_date, 0, 1);
+  $pdf->SetFont('helvetica', '', 11);
 
-    // =======================
-    // PDF417 barcode
-    // =======================
-    $style = [
-        'border' => false,
-        'padding' => 0,
-        'fgcolor' => [0,0,0],
-        'bgcolor' => false
-    ];
-    $pdf->write2DBarcode(
-        $qr_code,
-        'PDF417',
-        82,  // X
-        175,
-        50,
-        17,
-        $style,
-        'M',
-        true
-    );
-    $pdf->SetXY(93, 192);
-    $pdf->Cell(0, 0, 'VERIFY HERE', 0, 1);
-    // =======================
-    // Output PDF
-    // =======================
-    $safe_code = str_replace('/', '-', $certificate_code);
-    $safe_name = preg_replace('/[^A-Za-z0-9_\- ]/', '', $name);
+  // Issue Date
+  $pdf->SetXY($startX, $startY);
+  $pdf->Write(0, "Issue Date : ");
+  $pdf->SetFont('helvetica', 'B', 11);
+  $pdf->SetTextColor(0, 0, 0); // Black for the value
+  $pdf->Write(0, $issued);
 
-    $filename = 'Certificate_for_'.$safe_name.'_code_'.$safe_code.'.pdf';
+  // Validity Period
+  $pdf->SetFont('helvetica', '', 11);
+  $pdf->SetTextColor(70, 50, 110);
+  $startY += 6;
+  $pdf->SetXY($startX, $startY);
+  $pdf->Write(0, "Validity Period : ");
+  $pdf->SetFont('helvetica', 'B', 11);
+  $pdf->SetTextColor(0, 0, 0);
+  $pdf->Write(0, $validity_period);
 
-    if ($download) {
-        // Force download
-        $pdf->Output($filename, 'D');
-    } else {
-        // Display inline
-        $pdf->Output($filename, 'I');
-    }
+  // Certificate Number
+  $pdf->SetFont('helvetica', '', 11);
+  $pdf->SetTextColor(70, 50, 110);
+  $startY += 6;
+  $pdf->SetXY($startX, $startY);
+  $pdf->Write(0, "Certificate Number : ");
+  $pdf->SetFont('helvetica', 'B', 11);
+  $pdf->SetTextColor(0, 0, 0);
+  $pdf->Write(0, $certificate_code);
 
-    exit;
+  // Unique number
+  // $pdf->SetFont('helvetica', '', 11);
+  // $pdf->SetTextColor(70, 50, 110);
+  // $startY += 6;
+  // $pdf->SetXY($startX, $startY);
+  // $pdf->Write(0, "Unique number : ");
+  // $pdf->SetFont('helvetica', 'B', 11);
+  // $pdf->SetTextColor(0, 0, 0);
+  // $pdf->Write(0, $unique_code);
+
+  // Expiry Date
+  $pdf->SetFont('helvetica', '', 11);
+  $pdf->SetTextColor(70, 50, 110);
+  $startY += 6;
+  $pdf->SetXY($startX, $startY);
+  $pdf->Write(0, "Expiry Date : ");
+  $pdf->SetFont('helvetica', 'B', 11);
+  $pdf->SetTextColor(0, 0, 0);
+  $pdf->Write(0, $expiration_date);
+
+  // =======================
+  // PDF417 barcode
+  // =======================
+  $style = [
+    'border' => false,
+    'padding' => 0,
+    'fgcolor' => [0, 0, 0],
+    'bgcolor' => false
+  ];
+  $pdf->write2DBarcode(
+    $qr_code,
+    'PDF417',
+    82, // X
+    175,
+    50,
+    17,
+    $style,
+    'M',
+    true
+  );
+  $pdf->SetXY(93, 192);
+  $pdf->Cell(0, 0, 'VERIFY HERE', 0, 1);
+  // =======================
+  // Output PDF
+  // =======================
+  $safe_code = str_replace('/', '-', $certificate_code);
+  $safe_name = preg_replace('/[^A-Za-z0-9_\- ]/', '', $name);
+
+  $filename = 'Certificate_for_' . $safe_name . '_code_' . $safe_code . '.pdf';
+  if (isset($_GET['inline'])) {
+    $download = false;
+  }
+  if ($download) {
+    // Force download
+    $pdf->Output($filename, 'D');
+  }
+  else {
+    // Display inline
+    $pdf->Output($filename, 'I');
+  }
+
+  exit;
 }
 ?>
 <!DOCTYPE html>
@@ -641,14 +701,14 @@ endif; ?>
           <span><?php echo htmlspecialchars($user_phone); ?></span>
         </div>
         <?php
-    endif; ?>
+  endif; ?>
         <?php if ($user_address): ?>
         <div class="profile-meta-item">
           <i class="mdi mdi-map-marker"></i>
           <span><?php echo htmlspecialchars($user_address); ?></span>
         </div>
         <?php
-    endif; ?>
+  endif; ?>
         <div class="profile-meta-item">
           <i class="mdi mdi-calendar-check"></i>
           <span>Issued: <?php echo htmlspecialchars($issued); ?></span>
@@ -675,33 +735,18 @@ endif; ?>
     </ul>
    
   </div>
-  <?php endif; ?>
+  <?php
+  endif; ?>
   <!-- ── Certificate ───────────────────────────── -->
   <?php if (!$is_summary): ?>
   <div class="cert-section">
     <div class="section-label">Certificate</div>
     <div class="cert-container">
-      <div class="certificate">
-        <div class="name"><?php echo strtoupper($name); ?></div>
-        <div class="details">
-          <div class="issue-date"><strong><?php echo $issued; ?></strong></div>
-          <div class="validity-period"><strong><?php echo $validity_period; ?></strong></div>
-          <div class="cert-code-box"><strong><?php echo $certificate_code; ?></strong></div>
-           <div class="unique_code"><strong><?php echo $unique_code; ?></strong></div>
-          <div class="expiration-date"><strong><?php echo $expiration_date; ?></strong></div>
-        </div>
-        <!-- <div class="qr" <?php if (!$qr_code): ?>style="display:none;"<?php
-    endif; ?>>
-          <img src="<?php echo $qr_code; ?>">
-         
-        </div> -->
-        <div id="pdf417">
-           <?php include_once 'pdf417barcode.php'; ?>
-         </div>
-      </div>
+      <embed src="certificate_view_plain.php" type="application/pdf" width="100%" height="500px">
     </div>
   </div>
-  <?php endif; ?>
+  <?php
+  endif; ?>
 
 
   <!-- ── Download Button ───────────────────────── -->
@@ -715,7 +760,7 @@ endif; ?>
     
   </div>
   <?php
-    endif; ?>
+  endif; ?>
 
   <?php
 endif; // end if not show_prompt ?>

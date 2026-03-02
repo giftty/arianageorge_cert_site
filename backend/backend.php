@@ -78,7 +78,24 @@ try {
     }
 }
 catch (PDOException $e) {
-    // non-fatal: continue without breaking the app
+// non-fatal: continue without breaking the app
+}
+
+// Ensure 'is_admin_reply' column exists in messages table
+try {
+    $cols = $pdo->query("PRAGMA table_info(messages)")->fetchAll(PDO::FETCH_ASSOC);
+    $hasAdminReply = false;
+    foreach ($cols as $col) {
+        if (isset($col['name']) && $col['name'] === 'is_admin_reply') {
+            $hasAdminReply = true;
+            break;
+        }
+    }
+    if (!$hasAdminReply) {
+        $pdo->exec("ALTER TABLE messages ADD COLUMN is_admin_reply INTEGER DEFAULT 0");
+    }
+}
+catch (PDOException $e) {
 }
 
 $action = isset($_GET['action']) ? $_GET['action'] : '';
@@ -203,11 +220,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ];
                 $stmt = $pdo->query("SELECT COUNT(*) FROM certificates");
                 $count = $stmt->fetchColumn();
-                $base_prefix = $prefixes[$cert_type] ;
+                $base_prefix = $prefixes[$cert_type];
                 $random_snippet = generateRandomSnippet();
 
                 // Format: Prefix/0.ID/RandomCode
-                $final_cert_code = $base_prefix . (10000+$count);
+                $final_cert_code = $base_prefix . (10000 + $count + 1);
 
                 // 3. Update the certificate with the final code
                 $updateStmt = $pdo->prepare("UPDATE certificates SET cert_code = :cert_code, unique_number = :unic_num WHERE id = :id");
@@ -262,6 +279,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $resumption_date = $_POST['resumption_date'] ?? '';
         $cert_code = $_POST['cert_code'] ?? '';
 
+        $data_use_policy = isset($_POST['data_use_policy']) ? true : false;
+
         $errors = [];
         if (!$firstname)
             $errors['firstname'] = 'Firstname is required.';
@@ -269,6 +288,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors['lastname'] = 'Lastname is required.';
         if ($email && !filter_var($email, FILTER_VALIDATE_EMAIL))
             $errors['email'] = 'Invalid email format.';
+        if (!$data_use_policy)
+            $errors['data_use_policy'] = 'You must accept the data use policy.';
 
         $profile_image = '';
         if (isset($_FILES['profile_image']) && $_FILES['profile_image']['error'] === UPLOAD_ERR_OK) {
@@ -429,7 +450,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // delete old image
                     if (!empty($existing['profile_image'])) {
                         $oldPath = __DIR__ . '/..' . $existing['profile_image'];
-                        if (file_exists($oldPath)) unlink($oldPath);
+                        if (file_exists($oldPath))
+                            unlink($oldPath);
                     }
                     $profile_image = '/uploads/users/' . $newFileName;
                 }
@@ -490,6 +512,102 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             die($error);
         }
+    }
+}
+
+if ($action === 'get_certificate') {
+    if (!isLoggedIn()) {
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
+        exit;
+    }
+    $code = $_GET['code'] ?? '';
+    if (!$code) {
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'error', 'message' => 'Missing code']);
+        exit;
+    }
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM certificates WHERE cert_code = ?");
+        $stmt->execute([$code]);
+        $cert = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$cert) {
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'error', 'message' => 'Certificate not found']);
+            exit;
+        }
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'success', 'certificate' => $cert]);
+        exit;
+    }
+    catch (PDOException $e) {
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        exit;
+    }
+}
+
+if ($action === 'edit_certificate') {
+    $id = $_POST['id'] ?? '';
+    if (!$id) {
+        if (isset($_GET['ajax'])) {
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'error', 'message' => 'Missing id']);
+            exit;
+        }
+        die('Missing id');
+    }
+
+    $owner = $_POST['owner'] ?? '';
+    $cert_type = $_POST['cert_type'] ?? '';
+    $date_issued = $_POST['date_issued'] ?? '';
+    $expiration_date = $_POST['expiration_date'] ?? null;
+    $event = $_POST['event'] ?? '';
+
+    $errors = [];
+    if (!$owner)
+        $errors[] = 'Owner name is required.';
+    if (!$cert_type)
+        $errors[] = 'Certificate type is required.';
+    if (!$date_issued)
+        $errors[] = 'Date issued is required.';
+
+    if (!empty($errors)) {
+        if (isset($_GET['ajax'])) {
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'error', 'message' => implode(" ", $errors)]);
+            exit;
+        }
+        die(implode("\n", $errors));
+    }
+
+    try {
+        $stmt = $pdo->prepare("UPDATE certificates SET owner = :owner, cert_type = :cert_type, date_issued = :date_issued, expiration_date = :expiration_date, event = :event WHERE id = :id");
+        $stmt->execute([
+            ':owner' => $owner,
+            ':cert_type' => $cert_type,
+            ':date_issued' => $date_issued,
+            ':expiration_date' => $expiration_date ?: null,
+            ':event' => $event ?: null,
+            ':id' => $id
+        ]);
+
+        if (isset($_GET['ajax'])) {
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'success', 'message' => 'Certificate updated successfully!']);
+            exit;
+        }
+        header("Location: /admin/index.html?success=cert_updated");
+        exit;
+    }
+    catch (PDOException $e) {
+        $error = "Database error: " . $e->getMessage();
+        if (isset($_GET['ajax'])) {
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'error', 'message' => $error]);
+            exit;
+        }
+        die($error);
     }
 }
 
@@ -561,40 +679,40 @@ if ($action === 'get_users_data') {
     }
 }
 
-    if ($action === 'get_user') {
-        if (!isLoggedIn()) {
-            header('Content-Type: application/json');
-            echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
-            exit;
-        }
-
-        $id = $_GET['id'] ?? '';
-        if (!$id) {
-            header('Content-Type: application/json');
-            echo json_encode(['status' => 'error', 'message' => 'Missing id']);
-            exit;
-        }
-
-        try {
-            $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
-            $stmt->execute([$id]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
-            if (!$user) {
-                header('Content-Type: application/json');
-                echo json_encode(['status' => 'error', 'message' => 'User not found']);
-                exit;
-            }
-
-            header('Content-Type: application/json');
-            echo json_encode(['status' => 'success', 'user' => $user]);
-            exit;
-        }
-        catch (PDOException $e) {
-            header('Content-Type: application/json');
-            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
-            exit;
-        }
+if ($action === 'get_user') {
+    if (!isLoggedIn()) {
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
+        exit;
     }
+
+    $id = $_GET['id'] ?? '';
+    if (!$id) {
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'error', 'message' => 'Missing id']);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+        $stmt->execute([$id]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$user) {
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'error', 'message' => 'User not found']);
+            exit;
+        }
+
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'success', 'user' => $user]);
+        exit;
+    }
+    catch (PDOException $e) {
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        exit;
+    }
+}
 
 if ($action === 'delete_user') {
     if (!isLoggedIn()) {
@@ -677,13 +795,12 @@ if ($action === 'save_message') {
         $email_body .= "<div style='background-color:#f5f5f5;padding:10px;border-radius:5px;'>" . nl2br(htmlspecialchars($message)) . "</div>";
         $email_body .= "<p style='margin-top:20px;color:#666;'><a href='http://" . $_SERVER['HTTP_HOST'] . "/admin/messages.html'>View message in admin panel</a></p>";
         $email_body .= "</body></html>";
-        
-        @send_email($admin_email, $email_subject, $email_body);
-
+        @send_email($admin_email, $email_subject, $email_body, $email);
         header('Content-Type: application/json');
         echo json_encode(['status' => 'success', 'message' => 'Message sent.']);
         exit;
-    } catch (PDOException $e) {
+    }
+    catch (PDOException $e) {
         header('Content-Type: application/json');
         echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
         exit;
@@ -704,7 +821,8 @@ if ($action === 'get_messages') {
         header('Content-Type: application/json');
         echo json_encode(['status' => 'success', 'messages' => $messages]);
         exit;
-    } catch (PDOException $e) {
+    }
+    catch (PDOException $e) {
         header('Content-Type: application/json');
         echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
         exit;
@@ -719,50 +837,113 @@ if ($action === 'get_message') {
         exit;
     }
     $id = $_GET['id'] ?? '';
-    if (!$id) { header('Content-Type: application/json'); echo json_encode(['status'=>'error','message'=>'Missing id']); exit; }
+    if (!$id) {
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'error', 'message' => 'Missing id']);
+        exit;
+    }
     try {
         $stmt = $pdo->prepare("SELECT * FROM messages WHERE id = ?");
         $stmt->execute([$id]);
         $msg = $stmt->fetch(PDO::FETCH_ASSOC);
-        if (!$msg) { header('Content-Type: application/json'); echo json_encode(['status'=>'error','message'=>'Not found']); exit; }
-        header('Content-Type: application/json'); echo json_encode(['status'=>'success','message'=>$msg]); exit;
-    } catch (PDOException $e) { header('Content-Type: application/json'); echo json_encode(['status'=>'error','message'=>$e->getMessage()]); exit; }
+        if (!$msg) {
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'error', 'message' => 'Not found']);
+            exit;
+        }
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'success', 'message' => $msg]);
+        exit;
+    }
+    catch (PDOException $e) {
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        exit;
+    }
 }
 
 // Admin: mark message read
 if ($action === 'mark_message_read') {
-    if (!isLoggedIn()) { header('Content-Type: application/json'); echo json_encode(['status'=>'error','message'=>'Unauthorized']); exit; }
+    if (!isLoggedIn()) {
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
+        exit;
+    }
     $id = $_GET['id'] ?? '';
-    if (!$id) { header('Content-Type: application/json'); echo json_encode(['status'=>'error','message'=>'Missing id']); exit; }
-    try { $stmt = $pdo->prepare("UPDATE messages SET status = 'read' WHERE id = ?"); $stmt->execute([$id]); header('Content-Type: application/json'); echo json_encode(['status'=>'success']); exit; }
-    catch (PDOException $e) { header('Content-Type: application/json'); echo json_encode(['status'=>'error','message'=>$e->getMessage()]); exit; }
+    if (!$id) {
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'error', 'message' => 'Missing id']);
+        exit;
+    }
+    try {
+        $stmt = $pdo->prepare("UPDATE messages SET status = 'read' WHERE id = ?");
+        $stmt->execute([$id]);
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'success']);
+        exit;
+    }
+    catch (PDOException $e) {
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        exit;
+    }
 }
 
 // Admin: delete message
 if ($action === 'delete_message') {
-    if (!isLoggedIn()) { header('Content-Type: application/json'); echo json_encode(['status'=>'error','message'=>'Unauthorized']); exit; }
+    if (!isLoggedIn()) {
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
+        exit;
+    }
     $id = $_GET['id'] ?? '';
-    if (!$id) { header('Content-Type: application/json'); echo json_encode(['status'=>'error','message'=>'Missing id']); exit; }
-    try { $stmt = $pdo->prepare("DELETE FROM messages WHERE id = ?"); $stmt->execute([$id]); header('Content-Type: application/json'); echo json_encode(['status'=>'success']); exit; }
-    catch (PDOException $e) { header('Content-Type: application/json'); echo json_encode(['status'=>'error','message'=>$e->getMessage()]); exit; }
+    if (!$id) {
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'error', 'message' => 'Missing id']);
+        exit;
+    }
+    try {
+        $stmt = $pdo->prepare("DELETE FROM messages WHERE id = ?");
+        $stmt->execute([$id]);
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'success']);
+        exit;
+    }
+    catch (PDOException $e) {
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        exit;
+    }
 }
 
 // Admin: send reply to contact message
 if ($action === 'send_reply') {
-    if (!isLoggedIn()) { header('Content-Type: application/json'); echo json_encode(['status'=>'error','message'=>'Unauthorized']); exit; }
+    if (!isLoggedIn()) {
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
+        exit;
+    }
     $message_id = $_POST['message_id'] ?? $_GET['message_id'] ?? '';
     $reply_text = $_POST['reply_text'] ?? $_GET['reply_text'] ?? '';
-    
-    if (!$message_id || !$reply_text) { header('Content-Type: application/json'); echo json_encode(['status'=>'error','message'=>'Missing message_id or reply_text']); exit; }
-    
+
+    if (!$message_id || !$reply_text) {
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'error', 'message' => 'Missing message_id or reply_text']);
+        exit;
+    }
+
     try {
         // Get the original message
         $stmt = $pdo->prepare("SELECT * FROM messages WHERE id = ?");
         $stmt->execute([$message_id]);
         $msg = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if (!$msg) { header('Content-Type: application/json'); echo json_encode(['status'=>'error','message'=>'Message not found']); exit; }
-        
+
+        if (!$msg) {
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'error', 'message' => 'Message not found']);
+            exit;
+        }
+
         // Send reply email
         $subject = 'Re: ' . ($msg['subject'] ?: 'Your Message');
         $body = "<html><body style='font-family: Arial, sans-serif;'>";
@@ -772,17 +953,30 @@ if ($action === 'send_reply') {
         $body .= "</div>";
         $body .= "<p>Best regards,<br>Ariana Groups</p>";
         $body .= "</body></html>";
-        
+
         send_email($msg['email'], $subject, $body);
-        
+
+        // Save reply to database
+        $insertStmt = $pdo->prepare("INSERT INTO messages (name, email, subject, message, status, is_admin_reply) VALUES ('Admin', :email, :subject, :message, 'read', 1)");
+        $insertStmt->execute([
+            ':email' => $msg['email'],
+            ':subject' => 'Re: ' . $msg['subject'],
+            ':message' => $reply_text
+        ]);
+
         // Mark original message as read
         $updateStmt = $pdo->prepare("UPDATE messages SET status = 'read' WHERE id = ?");
         $updateStmt->execute([$message_id]);
-        
+
         header('Content-Type: application/json');
-        echo json_encode(['status'=>'success','message'=>'Reply sent']);
+        echo json_encode(['status' => 'success', 'message' => 'Reply sent']);
         exit;
-    } catch (PDOException $e) { header('Content-Type: application/json'); echo json_encode(['status'=>'error','message'=>$e->getMessage()]); exit; }
+    }
+    catch (PDOException $e) {
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        exit;
+    }
 }
 
 if ($action === 'delete_certificate') {
@@ -878,7 +1072,8 @@ if ($action === 'record_download') {
         header('Content-Type: application/json');
         echo json_encode(['status' => 'success', 'message' => 'Download recorded']);
         exit;
-    } catch (PDOException $e) {
+    }
+    catch (PDOException $e) {
         header('Content-Type: application/json');
         echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
         exit;
